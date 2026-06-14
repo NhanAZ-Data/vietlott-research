@@ -36,6 +36,7 @@ vietlott-keno-full-history = "vietlott_collector.keno_full_history:main"
 vietlott-auto-update = "vietlott_collector.incremental_update:main"
 vietlott-repository-data = "vietlott_collector.repository_data:main"
 vietlott-research-report = "vietlott_analytics.cli:main"
+vietlott-weather-update = "vietlott_analytics.weather:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

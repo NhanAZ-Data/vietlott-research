@@ -121,7 +121,13 @@ Chạy cập nhật thủ công
 ```powershell
 vietlott-auto-update --products keno bingo18 --output-dir data
 vietlott-repository-data publish --source-dir data --destination-dir datasets
+vietlott-weather-update --output-dir datasets/weather
+vietlott-research-report --datasets-dir datasets --site-dir site
 ```
+
+Dữ liệu khí tượng nằm tại `datasets/weather/daily.csv`. Đây là nhiệt độ và độ ẩm
+ngoài trời tái phân tích từ ERA5-Land, ghép theo địa điểm quay được Vietlott công bố.
+Nó là biến đại diện phục vụ sàng lọc giả thuyết, không phải nhiệt độ đo trong phòng quay.
 
 ## Tài liệu
 

@@ -187,7 +187,7 @@ async function selectProduct(slug) {
 }
 
 function renderProductReport(report) {
-  const { product, summary, analysis, backtest, audit } = report;
+  const { product, summary, analysis, backtest, audit, weather } = report;
   text(
     "product-kind",
     product.kind === "number_set" ? "Tập số không lặp" : "Chuỗi chữ số có vị trí",
@@ -200,6 +200,7 @@ function renderProductReport(report) {
   renderMetrics(summary, analysis, product);
   renderUniformity(analysis.uniformity, product.kind);
   renderFairnessAudit(audit);
+  renderWeatherReport(weather);
   renderBacktest(backtest, product.kind);
   renderPrizeReport(summary.prizes);
   renderRecentDraws(summary.recent_draws, product.kind);
@@ -555,6 +556,95 @@ function renderAuditTestRow(test) {
         <div><dt>Ngưỡng thực dụng</dt><dd>${escapeHtml(threshold)}</dd></div>
       </dl>
     </article>`;
+}
+
+function renderWeatherReport(weather) {
+  const container = document.getElementById("weather-report");
+  if (!container) return;
+  if (!weather || weather.status !== "ready") {
+    container.innerHTML = `
+      <div class="weather-empty">
+        Chưa có đủ dữ liệu thời tiết đã khóa để ghép với sản phẩm này.
+      </div>`;
+    return;
+  }
+  const coverage = weather.coverage;
+  const venueText = (coverage.venues || [])
+    .map((venue) => `${venue.name}: ${numberFormatter.format(venue.days)} ngày`)
+    .join(" · ");
+  const associations = (weather.associations || [])
+    .map((item) => {
+      const strength = correlationStrength(Math.abs(item.correlation));
+      return `
+        <article class="weather-association ${escapeHtml(item.status)}">
+          <span>${escapeHtml(item.label)}</span>
+          <strong>${escapeHtml(strength)}</strong>
+          <dl>
+            <div><dt>Liên hệ</dt><dd>${formatSigned(item.correlation, 3)}</dd></div>
+            <div><dt>q hiệu chỉnh</dt><dd>${formatPValue(item.q_value_bh)}</dd></div>
+            <div><dt>Số ngày</dt><dd>${numberFormatter.format(item.sample_days)}</dd></div>
+          </dl>
+          <p>
+            Liên hệ chạy từ -1 đến 1. Gần 0 nghĩa là gần như không đi cùng nhau;
+            dấu âm hoặc dương chỉ hướng thay đổi, không chứng minh nguyên nhân.
+          </p>
+        </article>`;
+    })
+    .join("");
+  const bands = (weather.temperature_bands || [])
+    .map(
+      (band) => `
+        <article>
+          <span>${escapeHtml(band.label)}</span>
+          <strong>${formatDecimal(band.temperature_mean, 1)}°C</strong>
+          <small>
+            ${numberFormatter.format(band.days)} ngày ·
+            ${escapeHtml(weather.outcome_feature.label)} ${formatDecimal(band.outcome_mean, 2)}
+          </small>
+        </article>`,
+    )
+    .join("");
+  container.innerHTML = `
+    <div class="weather-conclusion">
+      <div>
+        <span>Kết luận hiện tại</span>
+        <strong>${escapeHtml(weather.conclusion)}</strong>
+      </div>
+      <div class="weather-coverage">
+        <span>Độ phủ</span>
+        <strong>${formatPercent(coverage.coverage_rate)}</strong>
+        <small>
+          ${numberFormatter.format(coverage.matched_draws)} kỳ,
+          ${numberFormatter.format(coverage.matched_days)} ngày,
+          đến ${formatDate(coverage.latest_date)}
+        </small>
+      </div>
+    </div>
+    <p class="weather-venue-note">${escapeHtml(venueText)}</p>
+    <div class="weather-association-grid">${associations}</div>
+    <div class="weather-band-heading">
+      <span>Ba nhóm nhiệt độ để đọc mô tả</span>
+      <small>Mô tả thô, chưa khử mùa vụ. Không dùng riêng ba ô này để kết luận.</small>
+    </div>
+    <div class="weather-band-grid">${bands}</div>
+    <details class="weather-method">
+      <summary>Phạm vi đúng của phép kiểm này</summary>
+      <p>${escapeHtml(weather.method)}</p>
+      <ul>${weather.limitations.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+      <p>
+        Nguồn khí tượng <a href="${escapeHtml(weather.source.documentation)}">Open-Meteo ERA5-Land</a>.
+        Mốc chuyển địa điểm theo
+        <a href="${escapeHtml(weather.source.venue_source)}">thông báo chính thức của Vietlott</a>.
+      </p>
+    </details>`;
+}
+
+function correlationStrength(value) {
+  if (value < 0.05) return "Gần như không có";
+  if (value < 0.1) return "Rất yếu";
+  if (value < 0.3) return "Yếu";
+  if (value < 0.5) return "Vừa";
+  return "Mạnh";
 }
 
 function renderNumberAnalysis(analysis, product) {

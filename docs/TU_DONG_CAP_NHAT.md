@@ -36,6 +36,11 @@ chậm. Việc kiểm tra thêm sản phẩm chỉ tạo vài request và giúp 
 
 `ci.yml` chạy unit test, Ruff và kiểm tra toàn vẹn dataset khi mã nguồn thay đổi.
 
+`update-weather.yml` chạy một lần mỗi ngày. Workflow chỉ tải các ngày ERA5-Land đã
+ổn định, giữ biên trễ 7 ngày, sinh lại báo cáo thời tiết và triển khai website khi CSV
+khí tượng thay đổi. Quy trình này tách khỏi các lượt lấy kết quả Keno dày để không gọi
+nguồn khí tượng quá thường xuyên.
+
 `update-dataset.yml` là reusable workflow dùng chung cho hai lịch cập nhật. Hai
 workflow lịch chỉ truyền nhóm sản phẩm và tên báo cáo. Cách tổ chức này ngăn hai
 quy trình bị lệch phiên bản action, tham số retry hoặc bước kiểm tra.
@@ -77,6 +82,15 @@ dữ liệu ngừng cập nhật bất thường.
 11. Ghi bảng tóm tắt vào trang run và lưu báo cáo JSON dưới dạng artifact trong 14 ngày.
 12. Commit `datasets`, `predictions` và `site/data` khi có thay đổi.
 13. Đóng gói và triển khai GitHub Pages từ cùng lượt cập nhật.
+
+Workflow khí tượng có quy trình riêng
+
+1. Đọc CSV thời tiết đang có.
+2. Tải phần còn thiếu và làm mới 14 ngày cuối đã ổn định.
+3. Gắn đúng địa điểm Lạc Trung hoặc Tam Trinh theo ngày.
+4. Sinh lại báo cáo cho từng sản phẩm.
+5. Chạy test, commit CSV, metadata và JSON website khi có thay đổi.
+6. Triển khai GitHub Pages trong cùng workflow.
 
 Hai workflow dùng cùng một concurrency group nên không ghi đè nhau. Quyền
 `GITHUB_TOKEN` được giới hạn ở `contents: write`, `pages: write` và `id-token: write`.

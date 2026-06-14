@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,500;1,400;1,500&amp;display=swap">
   <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/3.0.0/uicons-regular-rounded/css/uicons-regular-rounded.css">
-  <link rel="stylesheet" href="assets/styles.css?v=20260615-4">
+  <link rel="stylesheet" href="assets/styles.css?v=20260615-5">
   <script src="assets/docs.js?v=20260614-2" defer></script>
 </head>
 <body>
@@ -81,6 +81,23 @@
             trong đường thu thập thường xuyên. Mỗi request có delay, jitter, retry và
             tôn trọng tín hiệu <code>Retry-After</code>.
           </p>
+          <h3>Nguồn khí tượng</h3>
+          <p>
+            Dữ liệu nhiệt độ và độ ẩm theo ngày đến từ
+            <a href="https://open-meteo.com/en/docs/historical-weather-api">Open-Meteo Historical Weather API</a>
+            với mô hình ERA5-Land. Tọa độ và giai đoạn địa điểm được khóa trong mã nguồn.
+            Mốc chuyển từ 23 Lạc Trung sang 18 Tam Trinh dựa trên
+            <a href="https://www.vietlott.vn/vi/tin-tuc/20199-thong-bao-thay-doi-dia-diem-trung-tam-quay-so-mo-thuong/">
+              thông báo chính thức của Vietlott
+            </a>.
+            Tọa độ được đối chiếu bằng dữ liệu
+            <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>.
+          </p>
+          <p>
+            CSV khí tượng là dữ liệu ngoài trời tái phân tích, không phải cảm biến trong
+            phòng quay. Repo chờ thêm 7 ngày trước khi ghi một ngày mới để tránh dữ liệu
+            ERA5-Land chưa hoàn tất.
+          </p>
         </section>
 
         <section id="schema">
@@ -116,6 +133,12 @@
             </a>
             <a href="https://github.com/NhanAZ/vietlott-data-research/blob/main/datasets/metadata/dataset-summary.json">
               <span>Manifest kiểm toán</span><strong>dataset-summary.json</strong>
+            </a>
+            <a href="https://github.com/NhanAZ/vietlott-data-research/blob/main/datasets/weather/daily.csv">
+              <span>CSV nhiệt độ và độ ẩm</span><strong>datasets/weather/daily.csv</strong>
+            </a>
+            <a href="https://github.com/NhanAZ/vietlott-data-research/blob/main/datasets/weather/metadata.json">
+              <span>Metadata khí tượng</span><strong>weather/metadata.json</strong>
             </a>
             <a href="data/audit-summary.json">
               <span>Tóm tắt kiểm định</span><strong>audit-summary.json</strong>

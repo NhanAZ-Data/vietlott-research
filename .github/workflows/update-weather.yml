@@ -1,0 +1,101 @@
+name: Cập nhật dữ liệu khí tượng
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "37 3 * * *"
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: vietlott-dataset-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    name: Cập nhật ERA5-Land và báo cáo
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      site_changed: ${{ steps.commit.outputs.changed }}
+    steps:
+      - name: Lấy mã nguồn
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Cài Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Cài chương trình
+        run: python -m pip install -e ".[dev]"
+
+      - name: Cập nhật nhiệt độ và độ ẩm
+        run: >
+          vietlott-weather-update
+          --output-dir datasets/weather
+          --refresh-days 14
+          --retries 5
+          --request-delay 1.0
+
+      - name: Tạo lại báo cáo
+        run: >
+          vietlott-research-report
+          --datasets-dir datasets
+          --site-dir site
+          --prediction-ledger predictions/ledger.jsonl
+
+      - name: Kiểm tra mã và báo cáo
+        run: |
+          python -m ruff check .
+          python -m pytest
+
+      - name: Commit khi dữ liệu thay đổi
+        id: commit
+        shell: bash
+        run: |
+          git add datasets/weather predictions site/data
+          if git diff --cached --quiet; then
+            echo "Không có ngày khí tượng mới"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "data: cập nhật khí tượng lịch sử"
+          git pull --rebase origin main
+          git push origin HEAD:main
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Cấu hình GitHub Pages
+        if: steps.commit.outputs.changed == 'true'
+        uses: actions/configure-pages@v6
+
+      - name: Đóng gói website
+        if: steps.commit.outputs.changed == 'true'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+  deploy:
+    name: Triển khai báo cáo khí tượng
+    needs: update
+    if: always() && needs.update.outputs.site_changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Triển khai GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

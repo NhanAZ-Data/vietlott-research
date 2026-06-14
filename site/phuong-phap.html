@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,500;1,400;1,500&amp;display=swap">
   <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/3.0.0/uicons-regular-rounded/css/uicons-regular-rounded.css">
-  <link rel="stylesheet" href="assets/styles.css?v=20260615-4">
+  <link rel="stylesheet" href="assets/styles.css?v=20260615-5">
 </head>
 <body>
   <a class="skip-link" href="#main">Bỏ qua điều hướng</a>
@@ -148,14 +148,25 @@
           </p>
           <p>
             Tần suất theo tháng và theo thứ trong tuần luôn được chia cho số kỳ thực tế
-            trong từng nhóm. Biểu đồ tháng chỉ là mô tả mùa vụ. Nó chưa phải phép kiểm
-            tra nhiệt độ vì dataset hiện không có nhiệt độ, độ ẩm, địa điểm máy, mã máy
-            hoặc mã bộ bi.
+            trong từng nhóm. Biểu đồ tháng vẫn chỉ là mô tả mùa vụ. Phép kiểm thời tiết
+            riêng sử dụng dữ liệu tái phân tích ERA5-Land theo địa điểm quay và ngày quay.
+          </p>
+          <p>
+            Repo ghi nhận Trung tâm Quay số tại số 23 Lạc Trung đến ngày 21/01/2025 và
+            tại số 18 Tam Trinh từ ngày 22/01/2025 theo thông báo chính thức của Vietlott.
+            Mỗi ngày chỉ tạo một mẫu phân tích, kể cả khi Keno có nhiều kỳ trong ngày.
+          </p>
+          <p>
+            Thông báo năm 2025 xác nhận Lạc Trung là địa điểm ngay trước khi chuyển.
+            Repo tạm áp dụng địa điểm này ngược đến ngày đầu dataset vì chưa tìm thấy
+            thông báo đổi địa điểm cũ hơn. Đây là giả định có ghi dấu và phải sửa nếu
+            xuất hiện nguồn lịch sử chính xác hơn.
           </p>
           <div class="callout warning">
-            Muốn kiểm tra giả thuyết nhiệt độ cần ghép dữ liệu khí tượng theo địa điểm
-            và thời gian quay, công bố trước mô hình hồi quy, kiểm soát thay đổi thiết bị
-            và đánh giá ngoài mẫu. So sánh 12 cột tháng không đủ để kết luận nhân quả.
+            Dữ liệu này đo thời tiết ngoài trời theo ô lưới khoảng 11 km, không phải nhiệt
+            độ trong phòng quay. Phép kiểm đã trừ trung bình trong cùng tháng-năm và địa
+            điểm, nhưng vẫn chưa kiểm soát được điều hòa, máy quay, bộ bi, bảo trì hoặc
+            luồng khí. Kết quả chỉ dùng để sàng lọc giả thuyết, không kết luận nhân quả.
           </div>
         </section>
 

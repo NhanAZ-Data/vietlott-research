@@ -13,6 +13,7 @@ from .fairness import (
 from .io import load_prize_summary, load_product_dataset
 from .predictions import PredictionLedger, build_backtest_report
 from .statistics import build_product_report
+from .weather_analysis import build_weather_report, load_weather_days
 
 
 def build_research_site(
@@ -25,6 +26,7 @@ def build_research_site(
     product_data_dir = site_dir / "data" / "products"
     product_data_dir.mkdir(parents=True, exist_ok=True)
     ledger = PredictionLedger.load(prediction_ledger_path.resolve())
+    weather_days = load_weather_days(datasets_dir)
     product_summaries: list[dict[str, object]] = []
     product_reports: list[dict[str, object]] = []
 
@@ -33,6 +35,7 @@ def build_research_site(
         dataset = load_product_dataset(datasets_dir, product)
         prize_summary = load_prize_summary(datasets_dir, product)
         report = build_product_report(dataset, prize_summary)
+        report["weather"] = build_weather_report(dataset, weather_days)
         report["backtest"] = build_backtest_report(dataset)
         report["audit"] = build_product_audit(dataset)
         product_reports.append(report)
