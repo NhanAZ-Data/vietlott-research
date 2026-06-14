@@ -303,17 +303,43 @@ function renderUniformity(uniformity, kind) {
       : `Dữ liệu cho thấy ${subject} khác mô hình đồng đều và độ lớn không còn ở mức rất nhỏ. Cần kiểm tra theo giai đoạn, nguồn và thay đổi quy trình trước khi diễn giải.`;
   text("test-explanation", explanation);
 
+  const entropy = uniformity.normalized_entropy;
   const metrics = [
-    ["Mức bất thường", formatPValue(pValue)],
-    ["Độ lệch thực tế", formatDecimal(effect, 4)],
-    ["Độ đồng đều", formatDecimal(uniformity.normalized_entropy, 6)],
+    [
+      "Mức bất thường",
+      formatPValue(pValue),
+      pValue >= 0.05
+        ? "Chưa bất thường. p nằm từ 0 đến 1; càng nhỏ càng khó giải thích bằng dao động ngẫu nhiên."
+        : "Có tín hiệu thống kê. p dưới 0,05 cần được kiểm tra tiếp và hiệu chỉnh khi thử nhiều phép kiểm.",
+    ],
+    [
+      "Độ lệch thực tế",
+      formatDecimal(effect, 4),
+      effect < 0.1
+        ? "Rất nhỏ. Cohen's w bắt đầu từ 0, không có trần cố định; 0,1 thường được xem là mức nhỏ."
+        : effect < 0.3
+          ? "Nhỏ. Mốc tham khảo Cohen's w là 0,1 nhỏ, 0,3 vừa và 0,5 lớn."
+          : effect < 0.5
+            ? "Vừa. Mốc tham khảo Cohen's w là 0,1 nhỏ, 0,3 vừa và 0,5 lớn."
+            : "Lớn theo mốc Cohen's w từ 0,5 trở lên.",
+    ],
+    [
+      "Độ đồng đều",
+      formatDecimal(entropy, 6),
+      entropy >= 0.99
+        ? "Rất gần đồng đều. Chỉ số nằm từ 0 đến 1; càng gần 1, tần suất càng phân tán đều."
+        : entropy >= 0.9
+          ? "Khá đồng đều. Chỉ số nằm từ 0 đến 1 và càng gần 1 càng đồng đều."
+          : "Phân bố tập trung hơn. Chỉ số nằm từ 0 đến 1 và càng thấp càng kém đồng đều.",
+    ],
   ];
   document.getElementById("test-metrics").innerHTML = metrics
     .map(
-      ([label, value]) => `
+      ([label, value, note]) => `
         <div class="test-metric">
           <span>${escapeHtml(label)}</span>
           <strong>${escapeHtml(value)}</strong>
+          <small>${escapeHtml(note)}</small>
         </div>`,
     )
     .join("");
@@ -482,6 +508,12 @@ function renderFairnessAudit(audit) {
         <strong>${numberFormatter.format(highlightedTests.length)} phép kiểm nổi bật</strong>
       </summary>
       <div class="audit-test-list-inner">
+        <aside class="audit-stat-guide">
+          <strong>Cách đọc p, q và độ lớn</strong>
+          <p><b>p gốc</b> nằm từ 0 đến 1. Số càng nhỏ thì kết quả càng khó xảy ra nếu mô hình tham chiếu đúng.</p>
+          <p><b>q hiệu chỉnh</b> cũng nằm từ 0 đến 1, nhưng đã tính việc chạy nhiều phép kiểm. Khi kết luận, ưu tiên đọc q thay cho p.</p>
+          <p><b>Độ lớn</b> cho biết sai lệch mạnh đến đâu. Thang đo thay đổi theo thuật toán, vì vậy phải so với "ngưỡng thực dụng" của chính phép kiểm đó.</p>
+        </aside>
         ${highlightedTests.map(renderAuditTestRow).join("")}
       </div>
     </details>`;
@@ -505,6 +537,9 @@ function renderAuditTestRow(test) {
   const pValue = test.p_value == null ? "N/A" : formatPValue(test.p_value);
   const qDisplay = qValue == null ? "N/A" : formatPValue(qValue);
   const effect = test.effect_size == null ? "N/A" : formatDecimal(test.effect_size, 4);
+  const threshold = test.practical_effect_threshold == null
+    ? "Không áp dụng"
+    : formatDecimal(test.practical_effect_threshold, 4);
   return `
     <article class="audit-test-row ${escapeHtml(test.status)}">
       <div>
@@ -514,9 +549,10 @@ function renderAuditTestRow(test) {
       </div>
       <dl>
         <div><dt>Trạng thái</dt><dd>${escapeHtml(auditStatusLabel(test.status))}</dd></div>
-        <div><dt>p</dt><dd>${escapeHtml(pValue)}</dd></div>
-        <div><dt>q</dt><dd>${escapeHtml(qDisplay)}</dd></div>
+        <div><dt>p gốc</dt><dd>${escapeHtml(pValue)}</dd></div>
+        <div><dt>q hiệu chỉnh</dt><dd>${escapeHtml(qDisplay)}</dd></div>
         <div><dt>Độ lớn</dt><dd>${escapeHtml(effect)}</dd></div>
+        <div><dt>Ngưỡng thực dụng</dt><dd>${escapeHtml(threshold)}</dd></div>
       </dl>
     </article>`;
 }
