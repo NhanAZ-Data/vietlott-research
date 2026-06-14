@@ -18,9 +18,11 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert 'id="du-doan"' in index
     assert 'id="kiem-dinh"' in index
     assert "assets/app.js?v=20260615-2" in index
+    assert "archive-summary-heading" in index
+    assert "Sổ dự đoán toàn hệ thống" in index
     assert "assets/docs.js?v=20260614-2" in data_page
     for page in (index, method_page, data_page):
-        assert "assets/styles.css?v=20260615-2" in page
+        assert "assets/styles.css?v=20260615-3" in page
         assert "assets/favicon.svg?v=20260614-9" in page
         assert "fonts.googleapis.com/css2?family=Noto+Serif" in page
         assert "cdn-uicons.flaticon.com/3.0.0" in page
@@ -29,6 +31,7 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert "[hidden]" in styles
     assert "display: none !important" in styles
     assert "min-height: 72px" in styles
+    assert "archive-summary-heading" in styles
     assert '--font-display: "Noto Serif"' in styles
     assert "Georgia" not in styles
     assert "Cambria" not in styles

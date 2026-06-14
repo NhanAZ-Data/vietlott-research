@@ -2294,6 +2294,32 @@ a {
   background: #173635;
 }
 
+.archive-summary .archive-summary-heading {
+  min-height: auto;
+  grid-column: 1 / -1;
+  padding: 18px 20px;
+  background: #123130;
+}
+
+.archive-summary-heading span {
+  color: var(--acid);
+}
+
+.archive-summary-heading strong {
+  margin-top: 4px;
+  color: var(--paper);
+  font-size: 20px;
+  line-height: 1.25;
+}
+
+.archive-summary-heading p {
+  max-width: 780px;
+  margin: 7px 0 0;
+  color: rgb(255 255 255 / 62%);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
 .archive-summary span {
   display: block;
   color: rgb(255 255 255 / 50%);
