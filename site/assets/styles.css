@@ -2384,6 +2384,7 @@ a {
   font-weight: 500;
   line-height: 1.02;
   letter-spacing: normal;
+  text-wrap: balance;
 }
 
 .document-hero > p:last-child {
@@ -2451,10 +2452,11 @@ a {
 .research-article h2 {
   margin: 0 0 24px;
   font-family: var(--font-display);
-  font-size: clamp(36px, 5vw, 58px);
+  font-size: clamp(36px, 4.5vw, 52px);
   font-weight: 500;
   line-height: 1.08;
   letter-spacing: normal;
+  text-wrap: balance;
 }
 
 .research-article h3 {
