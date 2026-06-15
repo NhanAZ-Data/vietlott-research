@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from heapq import nlargest
 from itertools import combinations
+from itertools import product as cartesian_product
 from pathlib import Path
 from statistics import NormalDist, fmean, stdev
 from typing import Any
@@ -35,6 +36,7 @@ AUDIT_DIGIT_SCORE_POLICY = (
 )
 PAIR_WINDOW_LIMIT = 5000
 NORMAL = NormalDist()
+BACKTEST_MULTIPLE_TESTING_ALPHA = 0.05
 
 
 @dataclass(slots=True)
@@ -273,6 +275,63 @@ def build_backtest_report(dataset: ProductDataset) -> dict[str, object]:
     return _digit_backtest(dataset)
 
 
+def finalize_backtests(product_reports: list[dict[str, Any]]) -> dict[str, Any]:
+    comparisons: list[tuple[dict[str, Any], str]] = []
+    completed_products = 0
+    for report in product_reports:
+        backtest = report.get("backtest")
+        if not isinstance(backtest, dict) or backtest.get("status") != "complete":
+            continue
+        completed_products += 1
+        product_slug = str(report["product"]["slug"])
+        for key in ("comparison", "audit_comparison"):
+            comparison = backtest.get(key)
+            if isinstance(comparison, dict) and isinstance(
+                comparison.get("approximate_p_value"),
+                (int, float),
+            ):
+                comparisons.append((comparison, product_slug))
+
+    q_values = _benjamini_hochberg(
+        [float(comparison["approximate_p_value"]) for comparison, _ in comparisons]
+    )
+    adjusted_wins = 0
+    unadjusted_wins = 0
+    products_with_adjusted_win: set[str] = set()
+    products_with_unadjusted_win: set[str] = set()
+    for (comparison, product_slug), q_value in zip(comparisons, q_values, strict=True):
+        difference = _comparison_difference(comparison)
+        unadjusted = difference > 0 and float(comparison["approximate_p_value"]) < 0.05
+        adjusted = difference > 0 and q_value < BACKTEST_MULTIPLE_TESTING_ALPHA
+        comparison["q_value_global_bh"] = _round(q_value, 8)
+        comparison["beats_baseline_unadjusted"] = unadjusted
+        comparison["beats_baseline"] = adjusted
+        comparison["multiple_testing_method"] = "benjamini_hochberg"
+        comparison["multiple_testing_scope"] = len(comparisons)
+        unadjusted_wins += int(unadjusted)
+        adjusted_wins += int(adjusted)
+        if unadjusted:
+            products_with_unadjusted_win.add(product_slug)
+        if adjusted:
+            products_with_adjusted_win.add(product_slug)
+
+    return {
+        "schema_version": 1,
+        "comparison_count": len(comparisons),
+        "product_count": completed_products,
+        "multiple_testing_method": "benjamini_hochberg",
+        "alpha": BACKTEST_MULTIPLE_TESTING_ALPHA,
+        "adjusted_winning_comparisons": adjusted_wins,
+        "unadjusted_winning_comparisons": unadjusted_wins,
+        "products_with_adjusted_win": sorted(products_with_adjusted_win),
+        "products_with_unadjusted_win": sorted(products_with_unadjusted_win),
+        "interpretation": (
+            "Chỉ nhãn đã hiệu chỉnh mới được dùng cho kết luận tổng quan. "
+            "Nhãn chưa hiệu chỉnh được giữ lại để kiểm tra độ nhạy."
+        ),
+    }
+
+
 def _forecast_events(dataset: ProductDataset) -> list[dict[str, Any]]:
     product = dataset.product
     latest = dataset.latest
@@ -508,12 +567,11 @@ def _number_backtest(dataset: ProductDataset) -> dict[str, object]:
 
     model_hits: list[int] = []
     audit_hits: list[int] = []
-    baseline_hits: list[int] = []
     differences: list[float] = []
     audit_differences: list[float] = []
     model_distribution = Counter()
     audit_distribution = Counter()
-    baseline_distribution = Counter()
+    expected_hits = (product.pick_count or 0) ** 2 / product.pool_size
     for index in range(start, len(observations)):
         target = observations[index]
         pair_scores = _number_pair_scores_from_counts(
@@ -541,19 +599,15 @@ def _number_backtest(dataset: ProductDataset) -> dict[str, object]:
             product.pick_count or 0,
             seed + "|audit",
         )
-        baseline = _uniform_number_pick(product, seed)
         actual = set(target.values)
         model_hit = len(actual.intersection(model))
         audit_hit = len(actual.intersection(audit_model))
-        baseline_hit = len(actual.intersection(baseline))
         model_hits.append(model_hit)
         audit_hits.append(audit_hit)
-        baseline_hits.append(baseline_hit)
-        differences.append(float(model_hit - baseline_hit))
-        audit_differences.append(float(audit_hit - baseline_hit))
+        differences.append(float(model_hit - expected_hits))
+        audit_differences.append(float(audit_hit - expected_hits))
         model_distribution[model_hit] += 1
         audit_distribution[audit_hit] += 1
-        baseline_distribution[baseline_hit] += 1
 
         total_counts.update(target.values)
         for value in target.values:
@@ -576,14 +630,25 @@ def _number_backtest(dataset: ProductDataset) -> dict[str, object]:
 
     z_score, p_value = _paired_normal_test(differences)
     audit_z_score, audit_p_value = _paired_normal_test(audit_differences)
-    expected_hits = (product.pick_count or 0) ** 2 / product.pool_size
+    difference_interval = _normal_mean_interval(differences)
+    audit_difference_interval = _normal_mean_interval(audit_differences)
+    baseline_distribution = _number_uniform_distribution(
+        product.pool_size,
+        product.pick_count or 0,
+        len(model_hits),
+    )
+    exact_probability = 1 / math.comb(product.pool_size, product.pick_count or 0)
+    comparison_wins = fmean(differences) > 0 and p_value < 0.05
+    audit_comparison_wins = fmean(audit_differences) > 0 and audit_p_value < 0.05
     return {
+        "schema_version": 2,
         "status": "complete",
         "method": "walk_forward",
         "samples": len(model_hits),
         "first_test_draw_id": observations[start].draw_id,
         "latest_test_draw_id": observations[-1].draw_id,
-        "minimum_history_draws": start,
+        "initial_training_draws": start,
+        "minimum_history_draws": minimum_history,
         "recent_window_draws": recent_window,
         "short_window_draws": short_window,
         "pair_window_draws": pair_window,
@@ -602,29 +667,34 @@ def _number_backtest(dataset: ProductDataset) -> dict[str, object]:
             "hit_distribution": _counter_to_rows(audit_distribution),
         },
         "baseline": {
-            "strategy": "uniform_seeded",
-            "average_hits": _round(fmean(baseline_hits)),
+            "strategy": "uniform_exact_expectation",
+            "method": "exact_hypergeometric_expectation",
+            "average_hits": _round(expected_hits),
             "expected_average_hits": _round(expected_hits),
-            "exact_hits": baseline_distribution[product.pick_count or 0],
-            "hit_distribution": _counter_to_rows(baseline_distribution),
+            "expected_exact_hits": _round(len(model_hits) * exact_probability),
+            "exact_hit_probability": _round(exact_probability, 12),
+            "hit_distribution": baseline_distribution,
         },
         "comparison": {
             "mean_hit_difference": _round(fmean(differences)),
             "paired_z_score": _round(z_score),
             "approximate_p_value": _round(p_value, 8),
-            "beats_baseline": fmean(differences) > 0 and p_value < 0.05,
+            **difference_interval,
+            "beats_baseline_unadjusted": comparison_wins,
+            "beats_baseline": False,
         },
         "audit_comparison": {
             "mean_hit_difference": _round(fmean(audit_differences)),
             "paired_z_score": _round(audit_z_score),
             "approximate_p_value": _round(audit_p_value, 8),
-            "beats_baseline": (
-                fmean(audit_differences) > 0 and audit_p_value < 0.05
-            ),
+            **audit_difference_interval,
+            "beats_baseline_unadjusted": audit_comparison_wins,
+            "beats_baseline": False,
         },
         "warning": (
-            "Backtest cuốn chiếu chỉ dùng dữ liệu trước kỳ kiểm tra. Kết quả vẫn có thể "
-            "do nhiễu và phải được xác nhận bằng dự đoán đã đóng băng."
+            "Backtest cuốn chiếu chỉ dùng dữ liệu trước kỳ kiểm tra. Baseline là kỳ vọng "
+            "siêu bội chính xác, không phải một lần bốc ngẫu nhiên. Nhãn vượt baseline chỉ "
+            "được kết luận sau hiệu chỉnh nhiều phép thử trên toàn bộ sản phẩm."
         ),
     }
 
@@ -656,10 +726,11 @@ def _digit_backtest(dataset: ProductDataset) -> dict[str, object]:
 
     model_exact = 0
     audit_exact = 0
-    baseline_exact = 0
     model_best: list[int] = []
     audit_best: list[int] = []
-    baseline_best: list[int] = []
+    baseline_best_expected: list[float] = []
+    baseline_exact_expected: list[float] = []
+    baseline_distribution: Counter[int] = Counter()
     for index in range(start, len(observations)):
         target = observations[index]
         seed = f"backtest|{product.slug}|{target.draw_id}|{MODEL_VERSION}"
@@ -672,15 +743,20 @@ def _digit_backtest(dataset: ProductDataset) -> dict[str, object]:
             "audit",
             seed,
         )
-        rng = random.Random(_seed_int(seed + "|uniform"))
-        baseline = "".join(str(rng.choice(symbols)) for _ in range(length))
         actual = set(target.outcomes)
+        (
+            expected_best_match,
+            expected_exact_probability,
+            expected_score_distribution,
+        ) = _digit_uniform_expectation(actual, symbols, length)
         model_exact += model in actual
         audit_exact += audit_model in actual
-        baseline_exact += baseline in actual
         model_best.append(_best_position_match(model, actual))
         audit_best.append(_best_position_match(audit_model, actual))
-        baseline_best.append(_best_position_match(baseline, actual))
+        baseline_best_expected.append(expected_best_match)
+        baseline_exact_expected.append(expected_exact_probability)
+        for score, probability in expected_score_distribution.items():
+            baseline_distribution[score] += probability
 
         _update_digit_counts(total, target.outcomes, 1)
         recent_items.append(target)
@@ -698,23 +774,27 @@ def _digit_backtest(dataset: ProductDataset) -> dict[str, object]:
     samples = len(model_best)
     differences = [
         float(model - baseline)
-        for model, baseline in zip(model_best, baseline_best, strict=True)
+        for model, baseline in zip(model_best, baseline_best_expected, strict=True)
     ]
     audit_differences = [
         float(model - baseline)
-        for model, baseline in zip(audit_best, baseline_best, strict=True)
+        for model, baseline in zip(audit_best, baseline_best_expected, strict=True)
     ]
     z_score, p_value = _paired_normal_test(differences)
     audit_z_score, audit_p_value = _paired_normal_test(audit_differences)
-    average_outcomes = fmean(len(item.outcomes) for item in observations[start:])
-    expected_exact_rate = min(1.0, average_outcomes / (len(symbols) ** length))
+    difference_interval = _normal_mean_interval(differences)
+    audit_difference_interval = _normal_mean_interval(audit_differences)
+    comparison_wins = fmean(differences) > 0 and p_value < 0.05
+    audit_comparison_wins = fmean(audit_differences) > 0 and audit_p_value < 0.05
     return {
+        "schema_version": 2,
         "status": "complete",
         "method": "walk_forward",
         "samples": samples,
         "first_test_draw_id": observations[start].draw_id,
         "latest_test_draw_id": observations[-1].draw_id,
-        "minimum_history_draws": start,
+        "initial_training_draws": start,
+        "minimum_history_draws": minimum_history,
         "recent_window_draws": recent_window,
         "short_window_draws": short_window,
         "symbol_min": product.sequence_min,
@@ -734,29 +814,37 @@ def _digit_backtest(dataset: ProductDataset) -> dict[str, object]:
             "average_best_position_matches": _round(fmean(audit_best)),
         },
         "baseline": {
-            "strategy": "uniform_seeded",
-            "exact_hits": baseline_exact,
-            "exact_hit_rate": _round(baseline_exact / samples),
-            "expected_exact_hit_rate": _round(expected_exact_rate),
-            "average_best_position_matches": _round(fmean(baseline_best)),
+            "strategy": "uniform_exact_expectation",
+            "method": "exact_sequence_enumeration",
+            "candidate_space_size": len(symbols) ** length,
+            "expected_exact_hits": _round(sum(baseline_exact_expected)),
+            "expected_exact_hit_rate": _round(fmean(baseline_exact_expected)),
+            "average_best_position_matches": _round(fmean(baseline_best_expected)),
+            "score_distribution": _expected_counter_to_rows(
+                baseline_distribution,
+                samples,
+            ),
         },
         "comparison": {
             "mean_position_match_difference": _round(fmean(differences)),
             "paired_z_score": _round(z_score),
             "approximate_p_value": _round(p_value, 8),
-            "beats_baseline": fmean(differences) > 0 and p_value < 0.05,
+            **difference_interval,
+            "beats_baseline_unadjusted": comparison_wins,
+            "beats_baseline": False,
         },
         "audit_comparison": {
             "mean_position_match_difference": _round(fmean(audit_differences)),
             "paired_z_score": _round(audit_z_score),
             "approximate_p_value": _round(audit_p_value, 8),
-            "beats_baseline": (
-                fmean(audit_differences) > 0 and audit_p_value < 0.05
-            ),
+            **audit_difference_interval,
+            "beats_baseline_unadjusted": audit_comparison_wins,
+            "beats_baseline": False,
         },
         "warning": (
-            "Các kết quả cùng một kỳ ở trò chơi nhiều hạng giải không hoàn toàn là các mẫu "
-            "độc lập. Chỉ nên xem đây là kiểm tra mô tả."
+            "Baseline được tính chính xác trên toàn bộ không gian chuỗi hợp lệ của từng kỳ. "
+            "Các kết quả cùng một kỳ ở trò chơi nhiều hạng giải không hoàn toàn độc lập, "
+            "vì vậy p-value vẫn chỉ là xấp xỉ và cần được đọc cùng kích thước hiệu ứng."
         ),
     }
 
@@ -1290,6 +1378,146 @@ def _paired_normal_test(differences: list[float]) -> tuple[float, float]:
     z_score = fmean(differences) / (stdev(differences) / math.sqrt(len(differences)))
     p_value = 2 * (1 - NORMAL.cdf(abs(z_score)))
     return z_score, max(0.0, min(1.0, p_value))
+
+
+def _normal_mean_interval(differences: list[float]) -> dict[str, float]:
+    mean_difference = fmean(differences)
+    if len(differences) < 2:
+        return {
+            "standard_error": 0.0,
+            "confidence_level": 0.95,
+            "confidence_interval_lower": _round(mean_difference),
+            "confidence_interval_upper": _round(mean_difference),
+        }
+    standard_error = stdev(differences) / math.sqrt(len(differences))
+    margin = NORMAL.inv_cdf(0.975) * standard_error
+    return {
+        "standard_error": _round(standard_error),
+        "confidence_level": 0.95,
+        "confidence_interval_lower": _round(mean_difference - margin),
+        "confidence_interval_upper": _round(mean_difference + margin),
+    }
+
+
+def _number_uniform_distribution(
+    pool_size: int,
+    pick_count: int,
+    samples: int,
+) -> list[dict[str, float | int]]:
+    denominator = math.comb(pool_size, pick_count)
+    minimum_hits = max(0, 2 * pick_count - pool_size)
+    rows = []
+    for hits in range(minimum_hits, pick_count + 1):
+        probability = (
+            math.comb(pick_count, hits)
+            * math.comb(pool_size - pick_count, pick_count - hits)
+            / denominator
+        )
+        rows.append(
+            {
+                "hits": hits,
+                "probability": _round(probability, 12),
+                "expected_count": _round(samples * probability),
+            }
+        )
+    return rows
+
+
+def _digit_uniform_expectation(
+    outcomes: set[str],
+    symbols: list[int],
+    length: int,
+) -> tuple[float, float, dict[int, float]]:
+    symbol_set = set(symbols)
+    valid_outcomes = {
+        tuple(int(char) for char in outcome)
+        for outcome in outcomes
+        if len(outcome) == length
+        and all(char.isdigit() and int(char) in symbol_set for char in outcome)
+    }
+    if not valid_outcomes:
+        return 0.0, 0.0, {0: 1.0}
+
+    space_size = len(symbols) ** length
+    tail_probabilities = {0: 1.0}
+    positions = tuple(range(length))
+    exact_match_candidates = [set() for _ in range(length + 1)]
+    for outcome in valid_outcomes:
+        for matching_count in range(1, length + 1):
+            for matching_positions in combinations(positions, matching_count):
+                matching = set(matching_positions)
+                mismatching_positions = [
+                    position for position in positions if position not in matching
+                ]
+                replacement_options = [
+                    [symbol for symbol in symbols if symbol != outcome[position]]
+                    for position in mismatching_positions
+                ]
+                for replacements in cartesian_product(*replacement_options):
+                    candidate = list(outcome)
+                    for position, replacement in zip(
+                        mismatching_positions,
+                        replacements,
+                        strict=True,
+                    ):
+                        candidate[position] = replacement
+                    exact_match_candidates[matching_count].add(tuple(candidate))
+
+    covered: set[tuple[int, ...]] = set()
+    for threshold in range(length, 0, -1):
+        covered.update(exact_match_candidates[threshold])
+        tail_probabilities[threshold] = len(covered) / space_size
+
+    score_distribution = {
+        score: tail_probabilities[score]
+        - tail_probabilities.get(score + 1, 0.0)
+        for score in range(length + 1)
+    }
+    expected_best_match = sum(
+        tail_probabilities[threshold] for threshold in range(1, length + 1)
+    )
+    exact_probability = tail_probabilities[length]
+    return expected_best_match, exact_probability, score_distribution
+
+
+def _expected_counter_to_rows(
+    counter: Counter[int],
+    samples: int,
+) -> list[dict[str, float | int]]:
+    return [
+        {
+            "matches": score,
+            "expected_count": _round(counter[score]),
+            "average_probability": _round(counter[score] / samples, 12),
+        }
+        for score in sorted(counter)
+    ]
+
+
+def _comparison_difference(comparison: dict[str, Any]) -> float:
+    for key in ("mean_hit_difference", "mean_position_match_difference"):
+        value = comparison.get(key)
+        if isinstance(value, (int, float)):
+            return float(value)
+    return 0.0
+
+
+def _benjamini_hochberg(p_values: list[float]) -> list[float]:
+    if not p_values:
+        return []
+    total = len(p_values)
+    ordered = sorted(enumerate(p_values), key=lambda item: item[1])
+    adjusted = [1.0] * total
+    running_minimum = 1.0
+    for reverse_rank, (original_index, p_value) in enumerate(
+        reversed(ordered),
+        start=1,
+    ):
+        rank = total - reverse_rank + 1
+        candidate = min(1.0, p_value * total / rank)
+        running_minimum = min(running_minimum, candidate)
+        adjusted[original_index] = running_minimum
+    return adjusted
 
 
 def _counter_to_rows(counter: Counter[int]) -> list[dict[str, int]]:

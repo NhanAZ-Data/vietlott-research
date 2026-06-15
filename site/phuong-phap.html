@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,500;1,400;1,500&amp;display=swap">
   <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/3.0.0/uicons-regular-rounded/css/uicons-regular-rounded.css">
-  <link rel="stylesheet" href="assets/styles.css?v=20260615-8">
+  <link rel="stylesheet" href="assets/styles.css?v=20260615-9">
 </head>
 <body>
   <a class="skip-link" href="#main">Bỏ qua điều hướng</a>
@@ -233,21 +233,23 @@
           <p>
             Cách này còn gọi là walk-forward backtest. Tại kỳ kiểm tra <em>t</em>,
             phương pháp chỉ được dùng dữ liệu trước <em>t</em>. Mỗi dự báo được so
-            với cách chọn ngẫu nhiên độc lập. Chênh lệch số trùng được kiểm tra xem
-            có đủ lớn để khó giải thích bằng may rủi hay không.
+            với điểm kỳ vọng chính xác của cách chọn đồng đều. Cách tính này loại bỏ
+            nhiễu do vô tình lấy một mẫu baseline may hoặc rủi hơn bình thường.
           </p>
           <h3>Backtest đang chạy chính xác những gì</h3>
           <ol class="research-list">
             <li>
               Tập số như Mega, Power, Lotto và Keno dùng tối đa 1.000 kỳ kiểm tra,
-              riêng Keno tối đa 5.000 kỳ. Lịch sử tối thiểu trước lần kiểm tra đầu
-              là số nhỏ hơn giữa 200 kỳ và một phần ba toàn bộ lịch sử, nhưng không
-              thấp hơn 30 kỳ.
+              riêng Keno tối đa 5.000 kỳ. Mốc huấn luyện ban đầu được tính từ
+              <code>min(200, max(30, một phần ba lịch sử))</code>. Nếu cần giới hạn
+              số kỳ kiểm tra, phần lịch sử cũ hơn được giữ làm dữ liệu huấn luyện,
+              nên số kỳ thật trước lần kiểm tra đầu có thể lớn hơn mốc này.
             </li>
             <li>
               Trò chơi theo chuỗi chữ số dùng tối đa 1.000 kỳ kiểm tra, riêng
-              Bingo18 tối đa 5.000 kỳ. Lịch sử tối thiểu được tính tương tự với
-              mốc trên là 100 kỳ.
+              Bingo18 tối đa 5.000 kỳ. Mốc huấn luyện ban đầu dùng công thức tương
+              tự nhưng chặn trên ở 100 kỳ. Số kỳ thật trước lần kiểm tra đầu cũng
+              có thể lớn hơn khi cửa sổ kiểm tra bị giới hạn.
             </li>
             <li>
               Sau khi dự đoán và chấm kỳ <em>t</em>, kết quả thật của kỳ đó mới
@@ -287,34 +289,41 @@
           </p>
           <h3>Baseline, điểm số và phép kiểm</h3>
           <p>
-            Baseline chọn đồng đều không hoàn lại đối với tập số và chọn đồng đều
-            từng vị trí đối với chuỗi chữ số. Seed được tạo bằng SHA-256 từ sản
-            phẩm, mã kỳ, phiên bản mô hình và nhãn backtest. Seed chỉ giúp tái lập
-            đúng lựa chọn, không làm baseline bớt ngẫu nhiên theo phân bố mục tiêu.
+            Với tập số, baseline dùng kỳ vọng và phân bố siêu bội chính xác. Nếu
+            chọn <em>k</em> số trong <em>N</em> số thì số trùng kỳ vọng mỗi kỳ là
+            <code>k² / N</code>. Với chuỗi chữ số, chương trình đếm toàn bộ chuỗi
+            hợp lệ và tính điểm tốt nhất kỳ vọng trước các kết quả thật của từng kỳ.
+            Vì vậy baseline backtest không phụ thuộc seed hoặc phiên bản mô hình.
           </p>
           <p>
             Với tập số, điểm là số lượng số chính trùng kết quả. Số đặc biệt chưa
             được tính trong backtest hiện tại. Với chuỗi chữ số, điểm là số vị trí
             khớp nhiều nhất giữa dự đoán và các kết quả công bố trong kỳ. Tại mỗi
-            kỳ, chương trình tính <code>d = điểm_chiến_lược - điểm_baseline</code>.
+            kỳ, chương trình tính <code>d = điểm_chiến_lược - điểm_kỳ_vọng_đồng_đều</code>.
           </p>
           <div class="formula-card">
             <span>Kiểm định chênh lệch ghép cặp</span>
             <strong>z = trung_bình(d) / (độ_lệch_chuẩn(d) / √n)</strong>
           </div>
           <p>
-            p-value hai phía được xấp xỉ bằng phân bố chuẩn. Một chiến lược chỉ
-            được đánh dấu vượt baseline khi trung bình chênh lệch dương và
-            <code>p &lt; 0,05</code>. Báo cáo hiện so hai chiến lược ứng viên là
+            p-value hai phía được xấp xỉ bằng phân bố chuẩn. Toàn bộ p-value của hai
+            chiến lược trên mọi sản phẩm sau đó được hiệu chỉnh Benjamini-Hochberg.
+            Một chiến lược chỉ được đánh dấu vượt baseline khi trung bình chênh lệch
+            dương và <code>q toàn hệ thống &lt; 0,05</code>. Báo cáo hiện so hai chiến lược ứng viên là
             “Kết hợp ba dấu hiệu” và “Tín hiệu kiểm định công bằng”. Chiến lược
             “Tần suất cửa sổ gần” có trong sổ dự đoán nhưng chưa được tính trong
             báo cáo backtest.
           </p>
+          <p>
+            Mỗi chênh lệch còn đi kèm khoảng ước lượng 95% theo xấp xỉ chuẩn
+            <code>trung_bình(d) ± 1,96 × sai_số_chuẩn</code>. Khoảng này giúp đọc
+            độ bất định của kích thước chênh lệch, thay vì chỉ nhìn p-value.
+          </p>
           <p class="callout warning">
-            Ngưỡng hiện tại chưa hiệu chỉnh cho việc thử nhiều chiến lược trên
-            nhiều sản phẩm. Vì vậy con số 2/8 là tín hiệu thăm dò, không phải bằng
-            chứng đã xác nhận. Phiên bản tiếp theo nên công bố khoảng tin cậy,
-            hiệu chỉnh multiple testing và một tập xác nhận ngoài mẫu riêng.
+            p thô vẫn được công bố để kiểm tra độ nhạy, nhưng không còn được dùng
+            làm kết luận tổng quan. Hiệu chỉnh nhiều phép thử làm giảm nguy cơ một
+            vài tín hiệu trông nổi bật chỉ vì đã thử nhiều cặp chiến lược và sản phẩm.
+            Backtest vẫn là bằng chứng thăm dò, không thay thế tập xác nhận ngoài mẫu.
           </p>
           <p>
             Toàn bộ triển khai có thể kiểm tra trực tiếp tại

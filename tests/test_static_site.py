@@ -17,12 +17,12 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert 'id="phan-tich"' in index
     assert 'id="du-doan"' in index
     assert 'id="kiem-dinh"' in index
-    assert "assets/app.js?v=20260615-7" in index
+    assert "assets/app.js?v=20260615-8" in index
     assert "archive-summary-heading" in index
     assert "Sổ dự đoán toàn hệ thống" in index
     assert "assets/docs.js?v=20260614-2" in data_page
     for page in (index, method_page, data_page):
-        assert "assets/styles.css?v=20260615-8" in page
+        assert "assets/styles.css?v=20260615-9" in page
         assert "assets/favicon.svg?v=20260614-9" in page
         assert "fonts.googleapis.com/css2?family=Noto+Serif" in page
         assert "cdn-uicons.flaticon.com/3.0.0" in page
@@ -39,7 +39,7 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert '.normalize("NFC")' in docs_script
     assert "Chọn ngẫu nhiên có thể lặp lại" in app_script
     assert (
-        "Kết luận: các strategy hiện tại chưa tốt hơn chọn ngẫu nhiên một cách đáng tin cậy."
+        "Kết luận: các chiến lược hiện tại chưa tốt hơn cách chọn đồng đều một cách đáng tin cậy."
         in app_script
     )
     assert "renderFairnessAudit" in app_script
@@ -60,13 +60,20 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert "Dự đoán gốc so với kết quả thật" in index
     assert "backtest-evidence" in app_script
     assert "Phương pháp và công thức của báo cáo này" in app_script
-    assert "chưa hiệu chỉnh cho việc thử nhiều sản phẩm và nhiều chiến lược" in app_script
+    assert "q toàn hệ thống &lt; 0,05" in app_script
+    assert "Baseline đồng đều chính xác" in app_script
+    assert "Khoảng ước lượng 95%" in app_script
+    assert "backtest-correction-summary" in index
     assert "src/vietlott_analytics/predictions.py" in app_script
     assert "Backtest đang chạy chính xác những gì" in method_page
     assert "Kiểm định chênh lệch ghép cặp" in method_page
+    assert "phân bố siêu bội chính xác" in method_page
+    assert "hiệu chỉnh Benjamini-Hochberg" in method_page
+    assert "trung_bình(d) ± 1,96 × sai_số_chuẩn" in method_page
     assert "tests/test_prediction_ledger.py" in method_page
     assert "renderBacktestOverview" in app_script
-    assert "cặp chiến lược - sản phẩm vượt tiêu chí" in app_script
+    assert "tín hiệu qua hiệu chỉnh" in app_script
+    assert "tín hiệu thô" in app_script
     assert "Xem chi tiết 8 báo cáo backtest" in index
     assert "Toàn hệ thống - khả năng dự báo" in index
     assert "Từ kết luận nhanh đến kiểm định chi tiết" in index
@@ -109,6 +116,7 @@ def test_generated_site_data_matches_manifest() -> None:
 
     assert manifest["draw_rows"] >= manifest["confirmed_rows"]
     assert manifest["analysis_export"]["path"] == "data/analysis-export.json"
+    assert manifest["backtest_summary"]["multiple_testing_method"] == "benjamini_hochberg"
     assert predictions["model_version"]
     assert manifest["fairness_audit"]["test_count"] == audit_summary["summary"]["test_count"]
     assert audit_summary["suite_version"] == "1.0.0"

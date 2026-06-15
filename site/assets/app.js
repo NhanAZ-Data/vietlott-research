@@ -40,7 +40,7 @@ async function initialize() {
     ? requested
     : "power655";
   await selectProduct(initial);
-  renderProjectVerdict(manifest.products).catch((error) => {
+  renderProjectVerdict(manifest.products, manifest.backtest_summary).catch((error) => {
     console.error("Không tổng hợp được kết luận toàn bộ sản phẩm", error);
   });
   if (initialHash) {
@@ -88,7 +88,7 @@ async function loadProductReport(slug) {
   return request;
 }
 
-async function renderProjectVerdict(products) {
+async function renderProjectVerdict(products, backtestSummary) {
   const settled = await Promise.allSettled(
     products.map((product) => loadProductReport(product.slug)),
   );
@@ -103,6 +103,16 @@ async function renderProjectVerdict(products) {
       || backtest.audit_comparison?.beats_baseline
     );
   }).length;
+  const adjustedComparisons = reports.reduce((count, report) => (
+    count
+    + Number(Boolean(report.backtest.comparison?.beats_baseline))
+    + Number(Boolean(report.backtest.audit_comparison?.beats_baseline))
+  ), 0);
+  const unadjustedComparisons = reports.reduce((count, report) => (
+    count
+    + Number(Boolean(report.backtest.comparison?.beats_baseline_unadjusted))
+    + Number(Boolean(report.backtest.audit_comparison?.beats_baseline_unadjusted))
+  ), 0);
 
   if (!reports.length) {
     text("verdict-backtest-count", "Chưa đủ dữ liệu");
@@ -116,9 +126,13 @@ async function renderProjectVerdict(products) {
 
   text("verdict-backtest-count", `${wins}/${reports.length}`);
   const conclusion = wins === 0
-    ? `Không sản phẩm nào trong ${reports.length} báo cáo có chiến lược vượt cách chọn ngẫu nhiên theo tiêu chí hiện tại.`
-    : `${wins} trong ${reports.length} sản phẩm có ít nhất một chiến lược vượt mốc ngẫu nhiên trong backtest, nhưng vẫn cần xác nhận bằng dự đoán đã lưu trước.`;
+    ? `Không sản phẩm nào trong ${reports.length} báo cáo vượt mốc ngẫu nhiên sau hiệu chỉnh nhiều phép thử.`
+    : `${wins} trong ${reports.length} sản phẩm có ít nhất một chiến lược vượt mốc ngẫu nhiên sau hiệu chỉnh, nhưng vẫn cần xác nhận bằng dự đoán đã lưu trước.`;
   text("project-verdict-summary", conclusion);
+  text(
+    "backtest-correction-summary",
+    `${adjustedComparisons} tín hiệu qua hiệu chỉnh; ${unadjustedComparisons} tín hiệu thô có p < 0,05 trên ${backtestSummary?.comparison_count ?? reports.length * 2} phép so sánh.`,
+  );
   renderBacktestOverview(reports);
   text(
     "prediction-current-conclusion",
@@ -142,7 +156,14 @@ function renderBacktestOverview(reports) {
         : null,
     ].filter(Boolean);
     const winners = comparisons.filter((item) => item.comparison?.beats_baseline);
-    const status = winners.length ? "Vượt tiêu chí backtest" : "Chưa vượt baseline";
+    const rawSignals = comparisons.filter(
+      (item) => item.comparison?.beats_baseline_unadjusted,
+    );
+    const status = winners.length
+      ? "Vượt sau hiệu chỉnh"
+      : rawSignals.length
+        ? "Có tín hiệu thô, chưa qua hiệu chỉnh"
+        : "Chưa vượt baseline";
     const evidence = comparisons.map((item) => {
       const difference = kind === "number_set"
         ? item.comparison.mean_hit_difference
@@ -151,7 +172,10 @@ function renderBacktestOverview(reports) {
         <li class="${item.comparison.beats_baseline ? "is-winner" : ""}">
           <span>${escapeHtml(item.label)}</span>
           <strong>${formatSigned(difference)}</strong>
-          <small>p ${formatPValue(item.comparison.approximate_p_value)}</small>
+          <small>
+            p ${formatPValue(item.comparison.approximate_p_value)}
+            · q ${formatPValue(item.comparison.q_value_global_bh)}
+          </small>
         </li>`;
     }).join("");
     return `
@@ -169,18 +193,24 @@ function renderBacktestOverview(reports) {
     + Number(Boolean(report.backtest.comparison?.beats_baseline))
     + Number(Boolean(report.backtest.audit_comparison?.beats_baseline))
   ), 0);
+  const rawSignals = reports.reduce((count, report) => (
+    count
+    + Number(Boolean(report.backtest.comparison?.beats_baseline_unadjusted))
+    + Number(Boolean(report.backtest.audit_comparison?.beats_baseline_unadjusted))
+  ), 0);
   text(
     "backtest-overview-summary",
     `${reports.filter((report) => (
       report.backtest.comparison?.beats_baseline
       || report.backtest.audit_comparison?.beats_baseline
-    )).length}/${reports.length} sản phẩm; ${winningStrategies} cặp chiến lược - sản phẩm vượt tiêu chí`,
+    )).length}/${reports.length} sản phẩm; ${winningStrategies} tín hiệu qua hiệu chỉnh; ${rawSignals} tín hiệu thô`,
   );
   container.innerHTML = `
     <p class="backtest-overview-note">
-      Chênh lệch dương nghĩa là điểm trung bình cao hơn baseline chọn ngẫu nhiên.
-      Tiêu chí hiện tại yêu cầu chênh lệch dương và p nhỏ hơn 0,05. Đây là backtest
-      trên quá khứ, chưa phải bằng chứng dự đoán kỳ tương lai.
+      Baseline là điểm kỳ vọng chính xác của cách chọn đồng đều, không phải kết quả
+      của một lần bốc ngẫu nhiên. Chỉ ghi nhận vượt baseline khi chênh lệch dương và
+      q Benjamini-Hochberg toàn hệ thống nhỏ hơn 0,05. p thô vẫn được công bố để
+      người đọc kiểm tra tác động của hiệu chỉnh.
     </p>
     ${rows.join("")}`;
 }
@@ -1085,9 +1115,15 @@ function renderBacktest(backtest, kind) {
         }
       : null,
   ].filter(Boolean);
-  const conclusion = modelRows.some((row) => row.comparison?.beats_baseline)
-    ? "Có ít nhất một strategy vượt mốc ngẫu nhiên trong backtest, nhưng vẫn phải xác nhận bằng dự đoán đã lưu trước."
-    : "Kết luận: các strategy hiện tại chưa tốt hơn chọn ngẫu nhiên một cách đáng tin cậy.";
+  const hasAdjustedWinner = modelRows.some((row) => row.comparison?.beats_baseline);
+  const hasRawSignal = modelRows.some(
+    (row) => row.comparison?.beats_baseline_unadjusted,
+  );
+  const conclusion = hasAdjustedWinner
+    ? "Có ít nhất một chiến lược vượt mốc ngẫu nhiên sau hiệu chỉnh nhiều phép thử, nhưng vẫn phải xác nhận bằng dự đoán đã lưu trước."
+    : hasRawSignal
+      ? "Có tín hiệu với p thô dưới 0,05, nhưng tín hiệu không còn đủ mạnh sau khi hiệu chỉnh toàn hệ thống."
+      : "Kết luận: các chiến lược hiện tại chưa tốt hơn cách chọn đồng đều một cách đáng tin cậy.";
   const scoreDescription = kind === "number_set"
     ? `
       <li><strong>Kết hợp ba dấu hiệu</strong><span>0,40 × z ngắn hạn + 0,30 × z gần - 0,15 × z toàn lịch sử + 0,15 × độ vắng đã chuẩn hóa.</span></li>
@@ -1124,8 +1160,11 @@ function renderBacktest(backtest, kind) {
       return `
         <p class="backtest-evidence">
           <span>${escapeHtml(row.label)}</span>
-          Chênh lệch ${formatSigned(comparisonValue)}, mức bất thường xấp xỉ
-          ${formatPValue(row.comparison.approximate_p_value)} trên
+          Chênh lệch ${formatSigned(comparisonValue)}, p thô
+          ${formatPValue(row.comparison.approximate_p_value)}, q sau hiệu chỉnh
+          ${formatPValue(row.comparison.q_value_global_bh)}. Khoảng ước lượng 95%
+          từ ${formatSigned(row.comparison.confidence_interval_lower)} đến
+          ${formatSigned(row.comparison.confidence_interval_upper)} trên
           ${numberFormatter.format(backtest.samples)} kỳ kiểm tra.
         </p>`;
     }).join("")}
@@ -1137,11 +1176,11 @@ function renderBacktest(backtest, kind) {
       <div class="backtest-method-body">
         <ol>
           <li><strong>Chia dữ liệu theo thời gian</strong><span>Tại kỳ t, thuật toán chỉ nhìn các kỳ trước t. Sau khi chấm xong kỳ t, kết quả kỳ đó mới được thêm vào lịch sử để dự đoán kỳ kế tiếp.</span></li>
-          <li><strong>Phạm vi kiểm tra</strong><span>${numberFormatter.format(backtest.samples)} kỳ, từ mã kỳ ${escapeHtml(backtest.first_test_draw_id)} đến ${escapeHtml(backtest.latest_test_draw_id)}. Cửa sổ ngắn ${numberFormatter.format(backtest.short_window_draws)} kỳ, cửa sổ gần ${numberFormatter.format(backtest.recent_window_draws)} kỳ${backtest.pair_window_draws ? `, cửa sổ cặp ${numberFormatter.format(backtest.pair_window_draws)} kỳ` : ""}.</span></li>
+          <li><strong>Phạm vi kiểm tra</strong><span>${numberFormatter.format(backtest.samples)} kỳ, từ mã kỳ ${escapeHtml(backtest.first_test_draw_id)} đến ${escapeHtml(backtest.latest_test_draw_id)}. Trước kỳ kiểm tra đầu có ${numberFormatter.format(backtest.initial_training_draws)} kỳ lịch sử. Cửa sổ ngắn ${numberFormatter.format(backtest.short_window_draws)} kỳ, cửa sổ gần ${numberFormatter.format(backtest.recent_window_draws)} kỳ${backtest.pair_window_draws ? `, cửa sổ cặp ${numberFormatter.format(backtest.pair_window_draws)} kỳ` : ""}.</span></li>
           ${scoreDescription}
-          <li><strong>Baseline đồng đều có seed</strong><span>Mỗi kỳ tạo một lựa chọn đồng đều có thể tái lập từ SHA-256 của sản phẩm, mã kỳ, phiên bản mô hình và nhãn backtest.</span></li>
-          <li><strong>So sánh ghép cặp</strong><span>Với mỗi kỳ tính d = điểm chiến lược - điểm baseline. Báo cáo lấy trung bình d và tính z = trung bình(d) / (độ lệch chuẩn(d) / √n), rồi lấy p hai phía từ phân bố chuẩn.</span></li>
-          <li><strong>Điều kiện hiện tại</strong><span>Chỉ ghi “vượt baseline” khi trung bình d &gt; 0 và p &lt; 0,05. Đây là ngưỡng thăm dò, chưa hiệu chỉnh cho việc thử nhiều sản phẩm và nhiều chiến lược.</span></li>
+          <li><strong>Baseline đồng đều chính xác</strong><span>Với tập số, kỳ vọng và phân bố số trùng được tính bằng phân bố siêu bội. Với chuỗi chữ số, chương trình đếm chính xác toàn bộ không gian chuỗi hợp lệ của từng kỳ. Kết quả không phụ thuộc seed.</span></li>
+          <li><strong>So sánh theo từng kỳ</strong><span>Với mỗi kỳ tính d = điểm chiến lược - điểm kỳ vọng đồng đều. Báo cáo lấy trung bình d và tính z = trung bình(d) / (độ lệch chuẩn(d) / √n), rồi lấy p hai phía từ phân bố chuẩn.</span></li>
+          <li><strong>Hiệu chỉnh toàn hệ thống</strong><span>Tất cả p-value của hai chiến lược trên mọi sản phẩm được hiệu chỉnh Benjamini-Hochberg. Chỉ ghi "vượt baseline" khi trung bình d &gt; 0 và q toàn hệ thống &lt; 0,05.</span></li>
         </ol>
         <p>
           Mã triển khai nằm trong

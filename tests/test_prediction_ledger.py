@@ -6,7 +6,12 @@ from datetime import date, timedelta
 
 from vietlott_analytics.catalog import PRODUCTS
 from vietlott_analytics.io import Observation, ProductDataset
-from vietlott_analytics.predictions import PredictionLedger, build_backtest_report
+from vietlott_analytics.predictions import (
+    PredictionLedger,
+    _digit_uniform_expectation,
+    build_backtest_report,
+    finalize_backtests,
+)
 
 
 def _dataset(draws: int) -> ProductDataset:
@@ -81,10 +86,80 @@ def test_walk_forward_backtest_reports_uniform_baseline() -> None:
     assert report["status"] == "complete"
     assert report["method"] == "walk_forward"
     assert report["samples"] > 0
-    assert report["baseline"]["strategy"] == "uniform_seeded"
+    assert report["baseline"]["strategy"] == "uniform_exact_expectation"
+    assert report["baseline"]["method"] == "exact_hypergeometric_expectation"
+    assert report["baseline"]["average_hits"] == 0.8
     assert report["audit_model"]["strategy"] == "audit_signal"
     assert "audit_comparison" in report
     assert "approximate_p_value" in report["comparison"]
+    assert report["comparison"]["confidence_level"] == 0.95
+    assert (
+        report["comparison"]["confidence_interval_lower"]
+        <= report["comparison"]["mean_hit_difference"]
+        <= report["comparison"]["confidence_interval_upper"]
+    )
+    assert report["comparison"]["beats_baseline"] is False
+
+
+def test_digit_uniform_expectation_enumerates_complete_space() -> None:
+    expected, exact_probability, distribution = _digit_uniform_expectation(
+        {"111"},
+        [1, 2],
+        3,
+    )
+
+    assert expected == 1.5
+    assert exact_probability == 0.125
+    assert distribution == {
+        0: 0.125,
+        1: 0.375,
+        2: 0.375,
+        3: 0.125,
+    }
+
+
+def test_finalize_backtests_applies_global_bh_correction() -> None:
+    reports = [
+        {
+            "product": {"slug": "first"},
+            "backtest": {
+                "status": "complete",
+                "comparison": {
+                    "mean_hit_difference": 0.1,
+                    "approximate_p_value": 0.01,
+                },
+                "audit_comparison": {
+                    "mean_hit_difference": 0.1,
+                    "approximate_p_value": 0.04,
+                },
+            },
+        },
+        {
+            "product": {"slug": "second"},
+            "backtest": {
+                "status": "complete",
+                "comparison": {
+                    "mean_position_match_difference": 0.1,
+                    "approximate_p_value": 0.06,
+                },
+                "audit_comparison": {
+                    "mean_position_match_difference": -0.1,
+                    "approximate_p_value": 0.001,
+                },
+            },
+        },
+    ]
+
+    summary = finalize_backtests(reports)
+
+    assert summary["comparison_count"] == 4
+    assert summary["unadjusted_winning_comparisons"] == 2
+    assert summary["adjusted_winning_comparisons"] == 1
+    assert summary["products_with_adjusted_win"] == ["first"]
+    assert reports[0]["backtest"]["comparison"]["q_value_global_bh"] == 0.02
+    assert reports[0]["backtest"]["comparison"]["beats_baseline"] is True
+    assert reports[0]["backtest"]["audit_comparison"]["beats_baseline"] is False
+    assert reports[1]["backtest"]["audit_comparison"]["beats_baseline"] is False
 
 
 def test_prediction_report_prefers_newer_model_for_same_cutoff(tmp_path) -> None:

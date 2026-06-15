@@ -11,7 +11,7 @@ from .fairness import (
     finalize_audits,
 )
 from .io import load_prize_summary, load_product_dataset
-from .predictions import PredictionLedger, build_backtest_report
+from .predictions import PredictionLedger, build_backtest_report, finalize_backtests
 from .statistics import build_product_report
 from .weather_analysis import build_weather_report, load_weather_days
 
@@ -56,6 +56,7 @@ def build_research_site(
             }
         )
 
+    backtest_summary = finalize_backtests(product_reports)
     audit_summary = finalize_audits(product_reports)
     for report in product_reports:
         _write_json(product_data_dir / f"{report['product']['slug']}.json", report)
@@ -81,6 +82,7 @@ def build_research_site(
         "prediction_evaluations": prediction_report["evaluation_count"],
         "prediction_pending": prediction_report["pending_count"],
         "fairness_audit": audit_summary["summary"],
+        "backtest_summary": backtest_summary,
         "methodology_version": "1.0.0",
         "analysis_export": {
             "path": "data/analysis-export.json",
@@ -135,7 +137,7 @@ def _build_analysis_export(
             ),
             "audit_summary": (
                 "Kết quả tổng hợp của bộ kiểm định công bằng thống kê sau hiệu chỉnh "
-                "nhiều phép thử trong từng bộ kiểm định."
+                "Benjamini-Hochberg ở cả phạm vi sản phẩm và toàn hệ thống."
             ),
             "audit_events": (
                 "Nhật ký phẳng của từng phép kiểm để lọc theo sản phẩm, phương pháp, "
@@ -143,7 +145,7 @@ def _build_analysis_export(
             ),
             "backtest": (
                 "Walk-forward theo thời gian. Mỗi kỳ chỉ dùng lịch sử trước kỳ đó và "
-                "so sánh ghép cặp với baseline chọn đồng đều có seed."
+                "so sánh với kỳ vọng chính xác của cách chọn đồng đều."
             ),
             "raw_draws": (
                 "Dữ liệu kỳ quay gốc không nhúng vào gói này vì có hàng trăm nghìn dòng. "
@@ -154,12 +156,21 @@ def _build_analysis_export(
             "backtest": {
                 "method": "walk_forward",
                 "candidate_strategies": ["balanced_signal", "audit_signal"],
-                "baseline": "uniform_seeded",
-                "win_rule": "mean_paired_difference > 0 and approximate_two_sided_p < 0.05",
+                "baseline": "uniform_exact_expectation",
+                "baseline_methods": {
+                    "number_set": "exact_hypergeometric_expectation",
+                    "digit_sequence": "exact_sequence_enumeration",
+                },
+                "multiple_testing": {
+                    "method": "benjamini_hochberg",
+                    "scope": "all completed product-strategy comparisons",
+                    "alpha": 0.05,
+                },
+                "win_rule": "mean_difference > 0 and global_bh_q < 0.05",
                 "important_limitations": [
-                    "Ngưỡng thắng chưa hiệu chỉnh đồng thời giữa nhiều sản phẩm và chiến lược.",
                     "Điểm backtest tập số hiện chỉ tính số chính, chưa tính số đặc biệt.",
                     "Tần suất cửa sổ gần có trong sổ dự đoán nhưng chưa nằm trong báo cáo backtest.",
+                    "p-value dùng xấp xỉ chuẩn trên chuỗi chênh lệch theo kỳ.",
                     "Backtest quá khứ không thay thế dự đoán đã đóng băng trước kỳ quay.",
                 ],
             },

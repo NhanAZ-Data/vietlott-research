@@ -497,6 +497,31 @@ a {
   color: rgb(255 255 255 / 76%);
 }
 
+.backtest-method-revision {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.2fr);
+  gap: 20px;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid rgb(207 255 77 / 30%);
+  border-radius: 14px;
+  background: rgb(207 255 77 / 8%);
+}
+
+.stance-verdict .backtest-method-revision strong {
+  color: var(--acid);
+  font-size: 13px;
+  line-height: 1.35;
+  letter-spacing: 0;
+}
+
+.backtest-method-revision span {
+  color: rgb(255 255 255 / 72%);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .backtest-overview-details {
   grid-column: 1 / -1;
   border-top: 1px solid rgb(255 255 255 / 16%);
@@ -3137,6 +3162,11 @@ a {
   .stance-verdict {
     grid-template-columns: 1fr;
     gap: 8px;
+  }
+
+  .backtest-method-revision {
+    grid-template-columns: 1fr;
+    gap: 6px;
   }
 
   .product-evidence-heading {
