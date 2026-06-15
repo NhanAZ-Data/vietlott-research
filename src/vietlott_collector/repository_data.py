@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import TextIO
 
 from .exclusions import KNOWN_EXCLUSIONS
+from .quality import write_quality_metadata
 from .storage import DRAW_COLUMNS, PRIZE_COLUMNS
 
 HIGH_FREQUENCY_PRODUCTS = {"keno", "bingo18"}
@@ -33,6 +34,7 @@ def publish_repository_data(
     temp_dir.mkdir(parents=True)
 
     try:
+        _copy_auxiliary_dataset_files(destination_dir, temp_dir)
         summary = _partition_draws(draws_path, temp_dir / "draws")
         prize_rows = _partition_prizes(prizes_path, temp_dir / "prizes")
         _write_exclusions(temp_dir / "exclusions.csv")
@@ -54,6 +56,7 @@ def publish_repository_data(
             json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
+        write_quality_metadata(temp_dir)
 
         _remove_tree(destination_dir)
         os.replace(temp_dir, destination_dir)
@@ -177,6 +180,37 @@ def validate_repository_data(root: Path = Path("datasets")) -> dict[str, object]
             errors.append("Summary draw_rows does not match partitions")
         if int(summary.get("prize_rows", -1)) != prize_rows:
             errors.append("Summary prize_rows does not match partitions")
+
+    quality_path = root / "metadata" / "quality-report.json"
+    if not quality_path.exists():
+        errors.append("Missing metadata/quality-report.json")
+    else:
+        quality = json.loads(quality_path.read_text(encoding="utf-8"))
+        totals = quality.get("totals", {})
+        if int(totals.get("draw_rows", -1)) != draw_rows:
+            errors.append("Quality report draw_rows does not match partitions")
+        if int(totals.get("prize_rows", -1)) != prize_rows:
+            errors.append("Quality report prize_rows does not match partitions")
+
+    manifest_path = root / "metadata" / "snapshot-manifest.json"
+    if not manifest_path.exists():
+        errors.append("Missing metadata/snapshot-manifest.json")
+    else:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest_rows = manifest.get("dataset_rows", {})
+        if int(manifest_rows.get("draws", -1)) != draw_rows:
+            errors.append("Snapshot manifest draw_rows does not match partitions")
+        if int(manifest_rows.get("prizes", -1)) != prize_rows:
+            errors.append("Snapshot manifest prize_rows does not match partitions")
+        for relative, expected in manifest.get("files", {}).items():
+            path = root / relative
+            if not path.exists():
+                errors.append(f"Snapshot file is missing: {relative}")
+                continue
+            if int(expected.get("bytes", -1)) != path.stat().st_size:
+                errors.append(f"Snapshot byte size changed: {relative}")
+            if str(expected.get("sha256", "")) != _sha256(path):
+                errors.append(f"Snapshot hash changed: {relative}")
 
     return {
         "valid": not errors,
@@ -328,6 +362,22 @@ def _remove_tree(path: Path) -> None:
     shutil.rmtree(path)
 
 
+def _copy_auxiliary_dataset_files(source: Path, destination: Path) -> None:
+    """Preserve independently maintained datasets such as historical weather."""
+
+    if not source.exists():
+        return
+    owned = {"draws", "prizes", "metadata", "exclusions.csv", "prize_rules.csv"}
+    for item in source.iterdir():
+        if item.name in owned:
+            continue
+        target = destination / item.name
+        if item.is_dir():
+            shutil.copytree(item, target)
+        elif item.is_file():
+            shutil.copyfile(item, target)
+
+
 def _minimum(old: object, new: str) -> str:
     return new if old is None else min(str(old), new)
 
@@ -369,6 +419,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     validate = subparsers.add_parser("validate")
     validate.add_argument("--source-dir", type=Path, default=Path("datasets"))
+
+    audit = subparsers.add_parser("audit")
+    audit.add_argument("--source-dir", type=Path, default=Path("datasets"))
     return parser
 
 
@@ -378,6 +431,8 @@ def main(argv: list[str] | None = None) -> None:
         report = publish_repository_data(args.source_dir, args.destination_dir)
     elif args.command == "hydrate":
         report = hydrate_repository_data(args.source_dir, args.destination_dir)
+    elif args.command == "audit":
+        report = write_quality_metadata(args.source_dir)
     else:
         report = validate_repository_data(args.source_dir)
     print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))

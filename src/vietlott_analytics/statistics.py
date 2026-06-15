@@ -49,6 +49,13 @@ def _common_report(
     month_counts = Counter(item.draw_date.month for item in observations)
     latest_jackpot = dataset.jackpot_values[-1] if dataset.jackpot_values else None
     largest_jackpot = max(dataset.jackpot_values, key=lambda item: item[1], default=None)
+    total_rows = sum(dataset.status_counts.values())
+    official_rows = dataset.source_origin_counts["official"]
+    cross_checked_rows = (
+        dataset.source_verification_counts["official_verified_match"]
+        + dataset.source_verification_counts["multi_source_consensus"]
+    )
+    prize_draws = int(prize_summary.get("draws_with_prizes", 0))
 
     return {
         "confirmed_draws": len(observations),
@@ -62,6 +69,27 @@ def _common_report(
         "source_hosts": dict(dataset.source_counts.most_common()),
         "data_sources": dict(dataset.data_source_counts.most_common()),
         "validation_statuses": dict(dataset.validation_counts.most_common()),
+        "data_quality": {
+            "canonical_rows": total_rows,
+            "result_coverage_rows": total_rows,
+            "result_coverage_rate": _round(total_rows / total_rows) if total_rows else 0,
+            "official_source_rows": official_rows,
+            "official_source_rate": _round(official_rows / total_rows)
+            if total_rows
+            else 0,
+            "cross_checked_rows": cross_checked_rows,
+            "cross_checked_rate": _round(cross_checked_rows / total_rows)
+            if total_rows
+            else 0,
+            "source_origins": dict(dataset.source_origin_counts.most_common()),
+            "source_verification": dict(
+                dataset.source_verification_counts.most_common()
+            ),
+            "prize_coverage_draws": prize_draws,
+            "prize_coverage_rate": _round(prize_draws / len(observations))
+            if observations
+            else 0,
+        },
         "draws_by_weekday": [
             {"weekday": index, "draws": weekday_counts[index]} for index in range(7)
         ],

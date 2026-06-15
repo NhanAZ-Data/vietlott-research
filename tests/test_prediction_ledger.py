@@ -4,6 +4,8 @@ import json
 from collections import Counter
 from datetime import date, timedelta
 
+import pytest
+
 from vietlott_analytics.catalog import PRODUCTS
 from vietlott_analytics.io import Observation, ProductDataset
 from vietlott_analytics.predictions import (
@@ -77,7 +79,83 @@ def test_prediction_ledger_is_idempotent_and_appends_evaluations(tmp_path) -> No
     ledger.save()
     lines = path.read_text(encoding="utf-8").splitlines()
     assert len(lines) == 12
-    assert all(json.loads(line)["event_type"] in {"prediction", "evaluation"} for line in lines)
+    saved = [json.loads(line) for line in lines]
+    assert all(event["event_type"] in {"prediction", "evaluation"} for event in saved)
+    assert all(len(event["event_hash"]) == 64 for event in saved)
+    assert saved[0]["previous_event_hash"] is None
+    assert saved[-1]["ledger_index"] == 11
+    reloaded = PredictionLedger.load(path)
+    assert reloaded.validate_integrity()["status"] == "valid"
+    assert reloaded.site_report()["ledger_integrity"]["root_hash"] == saved[-1]["event_hash"]
+
+
+def test_prediction_ledger_detects_historical_tampering(tmp_path) -> None:
+    path = tmp_path / "ledger.jsonl"
+    ledger = PredictionLedger.load(path)
+    ledger.process_product(_dataset(40))
+    ledger.save()
+
+    events = [
+        json.loads(line)
+        for line in path.read_text(encoding="utf-8").splitlines()
+    ]
+    events[1]["prediction"]["numbers"][0] = 45
+    path.write_text(
+        "\n".join(
+            json.dumps(event, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+            for event in events
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="hash mismatch"):
+        PredictionLedger.load(path)
+
+
+@pytest.mark.parametrize("mutation", ["delete", "insert", "append_unsealed"])
+def test_prediction_ledger_detects_structural_tampering(tmp_path, mutation) -> None:
+    path = tmp_path / "ledger.jsonl"
+    ledger = PredictionLedger.load(path)
+    ledger.process_product(_dataset(40))
+    ledger.save()
+    events = [
+        json.loads(line)
+        for line in path.read_text(encoding="utf-8").splitlines()
+    ]
+
+    if mutation == "delete":
+        events.pop(1)
+    elif mutation == "insert":
+        events.insert(1, events[0].copy())
+    else:
+        events.append({"event_type": "prediction", "prediction_id": "unsealed"})
+
+    path.write_text(
+        "\n".join(
+            json.dumps(event, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+            for event in events
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError):
+        PredictionLedger.load(path)
+
+
+def test_history_fingerprint_covers_all_observations() -> None:
+    original = _dataset(40)
+    changed = _dataset(40)
+    first = changed.observations[0]
+    changed.observations[0] = Observation(
+        draw_id=first.draw_id,
+        draw_date=first.draw_date,
+        values=(1, 2, 3, 4, 5, 45),
+    )
+
+    assert original.fingerprint == changed.fingerprint
+    assert original.history_fingerprint != changed.history_fingerprint
 
 
 def test_walk_forward_backtest_reports_uniform_baseline() -> None:
@@ -89,7 +167,9 @@ def test_walk_forward_backtest_reports_uniform_baseline() -> None:
     assert report["baseline"]["strategy"] == "uniform_exact_expectation"
     assert report["baseline"]["method"] == "exact_hypergeometric_expectation"
     assert report["baseline"]["average_hits"] == 0.8
+    assert report["recent_model"]["strategy"] == "recent_frequency"
     assert report["audit_model"]["strategy"] == "audit_signal"
+    assert "recent_comparison" in report
     assert "audit_comparison" in report
     assert "approximate_p_value" in report["comparison"]
     assert report["comparison"]["confidence_level"] == 0.95

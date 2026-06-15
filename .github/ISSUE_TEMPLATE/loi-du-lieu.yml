@@ -1,0 +1,45 @@
+name: Lỗi dữ liệu
+description: Báo bản ghi thiếu, sai, trùng hoặc xung đột nguồn
+title: "data: "
+labels:
+  - data-quality
+body:
+  - type: dropdown
+    id: product
+    attributes:
+      label: Sản phẩm
+      options:
+        - Mega 6/45
+        - Power 6/55
+        - Lotto 5/35
+        - Keno
+        - Bingo18
+        - Max 3D
+        - Max 3D Pro
+        - Max 4D
+    validations:
+      required: true
+  - type: input
+    id: draw
+    attributes:
+      label: Mã kỳ quay
+  - type: textarea
+    id: observed
+    attributes:
+      label: Dữ liệu đang có
+      description: Ghi giá trị, tệp và dòng nếu biết
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Dữ liệu mong đợi
+    validations:
+      required: true
+  - type: textarea
+    id: sources
+    attributes:
+      label: Nguồn đối chiếu
+      description: Cung cấp URL và thời điểm truy cập
+    validations:
+      required: true

@@ -36,6 +36,21 @@ jobs:
       - name: Cài chương trình
         run: python -m pip install -e ".[dev]"
 
+      - name: Lưu báo cáo trước cập nhật
+        shell: bash
+        run: |
+          before_dir="$RUNNER_TEMP/vietlott-weather-reports/before"
+          mkdir -p "$before_dir"
+          for file in \
+            datasets/weather/daily.csv \
+            site/data/manifest.json \
+            site/data/audit-summary.json \
+            site/data/predictions.json; do
+            if test -f "$file"; then
+              cp "$file" "$before_dir/$(basename "$file")"
+            fi
+          done
+
       - name: Cập nhật nhiệt độ và độ ẩm
         run: >
           vietlott-weather-update
@@ -45,16 +60,37 @@ jobs:
           --request-delay 1.0
 
       - name: Tạo lại báo cáo
-        run: >
-          vietlott-research-report
-          --datasets-dir datasets
-          --site-dir site
-          --prediction-ledger predictions/ledger.jsonl
+        run: |
+          vietlott-repository-data audit --source-dir datasets
+          vietlott-research-report \
+            --datasets-dir datasets \
+            --site-dir site \
+            --prediction-ledger predictions/ledger.jsonl
 
       - name: Kiểm tra mã và báo cáo
         run: |
           python -m ruff check .
           python -m pytest
+
+      - name: Lưu báo cáo sau cập nhật
+        shell: bash
+        run: |
+          after_dir="$RUNNER_TEMP/vietlott-weather-reports/after"
+          mkdir -p "$after_dir"
+          cp datasets/weather/daily.csv "$after_dir/"
+          cp site/data/manifest.json "$after_dir/"
+          cp site/data/audit-summary.json "$after_dir/"
+          cp site/data/predictions.json "$after_dir/"
+
+      - name: Lưu artifact chẩn đoán
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: vietlott-weather-${{ github.run_id }}
+          path: ${{ runner.temp }}/vietlott-weather-reports
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Commit khi dữ liệu thay đổi
         id: commit

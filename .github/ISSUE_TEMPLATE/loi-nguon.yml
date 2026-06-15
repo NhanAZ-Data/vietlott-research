@@ -1,0 +1,34 @@
+name: Lỗi nguồn thu thập
+description: Báo endpoint, parser hoặc lịch cập nhật không còn hoạt động
+title: "source: "
+labels:
+  - source
+body:
+  - type: input
+    id: source
+    attributes:
+      label: Nguồn hoặc URL
+    validations:
+      required: true
+  - type: input
+    id: first_seen
+    attributes:
+      label: Thời điểm bắt đầu lỗi
+  - type: textarea
+    id: symptom
+    attributes:
+      label: Biểu hiện
+      description: HTTP status, log rút gọn hoặc thay đổi HTML
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Phạm vi ảnh hưởng
+      description: Sản phẩm, kỳ quay và dữ liệu có nguy cơ thiếu
+    validations:
+      required: true
+  - type: textarea
+    id: fallback
+    attributes:
+      label: Nguồn dự phòng đã kiểm tra

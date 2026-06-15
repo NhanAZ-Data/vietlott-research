@@ -3,8 +3,11 @@ from __future__ import annotations
 from collections import Counter
 from datetime import date, timedelta
 
+import pytest
+
 from vietlott_analytics.catalog import PRODUCTS
 from vietlott_analytics.fairness import (
+    EFFECT_THRESHOLD_REGISTRY,
     audit_log_events,
     build_product_audit,
     finalize_audits,
@@ -32,7 +35,7 @@ def test_number_audit_contains_lightweight_fairness_tests() -> None:
 
     audit = build_product_audit(dataset)
 
-    assert audit["suite_version"] == "1.0.0"
+    assert audit["suite_version"] == "2.0.0"
     assert audit["history_draws"] == 90
     assert audit["audit_interval_draws"] == 25
     assert {test["id"] for test in audit["tests"]} >= {
@@ -43,7 +46,16 @@ def test_number_audit_contains_lightweight_fairness_tests() -> None:
         "number_current_gap_geometric",
     }
     assert all("interpretation" in test for test in audit["tests"])
+    assert all("statistically_notable" in test for test in audit["tests"])
+    assert all("practically_large" in test for test in audit["tests"])
     assert all("q_value_bh" in test for test in audit["tests"] if test["p_value"] is not None)
+    registered_thresholds = {entry["id"] for entry in EFFECT_THRESHOLD_REGISTRY}
+    active_tests = [test for test in audit["tests"] if test["status"] != "skipped"]
+    assert all(test["effect_threshold_id"] in registered_thresholds for test in active_tests)
+    assert all(entry["unit"] for entry in audit["effect_thresholds"])
+    assert all(entry["scope"] for entry in audit["effect_thresholds"])
+    assert all(entry["reference_or_rationale"] for entry in audit["effect_thresholds"])
+    assert all(entry["sensitivity_method"] for entry in audit["effect_thresholds"])
 
 
 def test_finalize_audits_adds_global_correction_and_jsonl_events() -> None:
@@ -75,10 +87,35 @@ def test_finalize_audits_adds_global_correction_and_jsonl_events() -> None:
 
     assert summary["summary"]["product_count"] == 1
     assert summary["summary"]["test_count"] == len(report["audit"]["tests"])
+    assert summary["effect_thresholds"]
+    assert summary["threshold_sensitivity"]["method"] == "threshold_multiplier_sweep"
+    assert summary["threshold_sensitivity"]["multipliers"] == [0.5, 1.0, 1.5, 2.0]
+    assert any(
+        entry["test_count"] > 0
+        for entry in summary["threshold_sensitivity"]["by_threshold"]
+    )
     assert events
     assert {event["event_type"] for event in events} == {"fairness_audit_test"}
     assert all(
         "q_value_global_bh" in test
         for test in report["audit"]["tests"]
         if test["p_value"] is not None
+    )
+    assert set(summary["summary"]["status_counts"]) <= {
+        "pass",
+        "statistically_notable",
+        "practically_large",
+        "both",
+        "skipped",
+    }
+    position_test = next(
+        item
+        for item in report["audit"]["tests"]
+        if item["id"] == "digit_position_chi_square"
+    )
+    residuals = position_test["parameters"]["position_residuals"]
+    assert len(residuals) == 18
+    assert sum(item["chi_square_contribution"] for item in residuals) == pytest.approx(
+        position_test["statistic"],
+        abs=1e-4,
     )

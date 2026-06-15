@@ -21,6 +21,7 @@ parquet = [
   "pyarrow>=17,<23",
 ]
 dev = [
+  "jsonschema>=4.23,<5",
   "pytest>=8.3,<10",
   "ruff>=0.9,<1",
 ]

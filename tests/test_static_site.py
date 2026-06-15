@@ -4,6 +4,8 @@ import json
 import unicodedata
 from pathlib import Path
 
+import jsonschema
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -17,12 +19,12 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert 'id="phan-tich"' in index
     assert 'id="du-doan"' in index
     assert 'id="kiem-dinh"' in index
-    assert "assets/app.js?v=20260615-8" in index
+    assert "assets/app.js?v=20260615-11" in index
     assert "archive-summary-heading" in index
     assert "Sổ dự đoán toàn hệ thống" in index
-    assert "assets/docs.js?v=20260614-2" in data_page
+    assert "assets/docs.js?v=20260615-1" in data_page
     for page in (index, method_page, data_page):
-        assert "assets/styles.css?v=20260615-9" in page
+        assert "assets/styles.css?v=20260615-12" in page
         assert "assets/favicon.svg?v=20260614-9" in page
         assert "fonts.googleapis.com/css2?family=Noto+Serif" in page
         assert "cdn-uicons.flaticon.com/3.0.0" in page
@@ -49,6 +51,12 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert "Cách đọc p, q và độ lớn" in app_script
     assert "Ngưỡng thực dụng" in app_script
     assert "renderAuditVisualLog" in app_script
+    assert "renderAuditThresholdSensitivity" in app_script
+    assert "threshold_sensitivity" in app_script
+    assert "renderAuditPositionResiduals" in app_script
+    assert "Ô nào đóng góp nhiều vào độ lệch tổng?" in app_script
+    assert "threshold-sensitivity-grid" in styles
+    assert "position-residual-grid" in styles
     assert "audit-test-details" in app_script
     assert "audit-test-list-inner" in styles
     assert 'text("ribbon-product-count"' in app_script
@@ -58,6 +66,8 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert "Khai thác kiểm định công bằng" in app_script
     assert "prediction-history-list" in index
     assert "Dự đoán gốc so với kết quả thật" in index
+    assert "prediction-ledger-integrity" in index
+    assert "Chuỗi hash hợp lệ" in app_script
     assert "backtest-evidence" in app_script
     assert "Phương pháp và công thức của báo cáo này" in app_script
     assert "q toàn hệ thống &lt; 0,05" in app_script
@@ -68,6 +78,7 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert "Backtest đang chạy chính xác những gì" in method_page
     assert "Kiểm định chênh lệch ghép cặp" in method_page
     assert "phân bố siêu bội chính xác" in method_page
+    assert "Ba chiến lược ứng viên" in method_page
     assert "hiệu chỉnh Benjamini-Hochberg" in method_page
     assert "trung_bình(d) ± 1,96 × sai_số_chuẩn" in method_page
     assert "tests/test_prediction_ledger.py" in method_page
@@ -82,6 +93,10 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert "audit-log.jsonl" in index
     assert "audit-summary.json" in data_page
     assert "analysis-export.json" in data_page
+    assert "analysis-export.schema.json" in data_page
+    assert "quality-report.json" in data_page
+    assert "snapshot-manifest.json" in data_page
+    assert "source-quality-table" in data_page
     assert "Gói phân tích đầy đủ cho Data Analytics AI" in data_page
     assert "display: block;\n  height: 100%;" in styles
     assert "grid-template-columns: auto minmax(0, 1fr)" in styles
@@ -113,13 +128,26 @@ def test_generated_site_data_matches_manifest() -> None:
     analysis_export = json.loads(
         (data_root / "analysis-export.json").read_text(encoding="utf-8")
     )
+    analysis_schema = json.loads(
+        (data_root / "analysis-export.schema.json").read_text(encoding="utf-8")
+    )
+    dataset_quality = json.loads(
+        (data_root / "dataset-quality.json").read_text(encoding="utf-8")
+    )
+    snapshot_manifest = json.loads(
+        (data_root / "snapshot-manifest.json").read_text(encoding="utf-8")
+    )
 
     assert manifest["draw_rows"] >= manifest["confirmed_rows"]
     assert manifest["analysis_export"]["path"] == "data/analysis-export.json"
     assert manifest["backtest_summary"]["multiple_testing_method"] == "benjamini_hochberg"
+    assert manifest["backtest_summary"]["comparison_count"] == 24
     assert predictions["model_version"]
+    assert predictions["ledger_integrity"]["status"] == "valid"
+    assert predictions["ledger_integrity"]["event_count"] > 0
+    assert len(predictions["ledger_integrity"]["root_hash"]) == 64
     assert manifest["fairness_audit"]["test_count"] == audit_summary["summary"]["test_count"]
-    assert audit_summary["suite_version"] == "1.0.0"
+    assert audit_summary["suite_version"] == "2.0.0"
     assert audit_log
     assert analysis_export["export_type"] == "vietlott_research_analysis"
     assert analysis_export["manifest"] == manifest
@@ -127,10 +155,39 @@ def test_generated_site_data_matches_manifest() -> None:
     assert analysis_export["audit_summary"] == audit_summary
     assert len(analysis_export["product_reports"]) == len(manifest["products"])
     assert analysis_export["audit_events"]
+    jsonschema.validate(analysis_export, analysis_schema)
+    assert analysis_export["schema_version"] == 2
+    assert analysis_export["dataset_quality"] == dataset_quality
+    assert analysis_export["snapshot_manifest"] == snapshot_manifest
+    assert manifest["draw_rows"] == dataset_quality["totals"]["draw_rows"]
+    assert manifest["prize_rows"] == dataset_quality["totals"]["prize_rows"]
+    assert snapshot_manifest["dataset_rows"] == {
+        "draws": manifest["draw_rows"],
+        "prizes": manifest["prize_rows"],
+    }
+    assert predictions["pending_count"] >= predictions["embedded_pending_count"]
+    assert sum(
+        len(rows) for rows in predictions["latest"].values()
+    ) == predictions["embedded_pending_count"]
+    assert analysis_export["methodology"]["versions"] == manifest["methodology_versions"]
+    assert analysis_export["raw_data_catalog"]
+    for entry in analysis_export["raw_data_catalog"]:
+        assert len(entry["sha256"]) == 64
+        assert entry["path"] in snapshot_manifest["files"]
     for product in manifest["products"]:
         report = json.loads(
             (data_root / "products" / f"{product['slug']}.json").read_text(encoding="utf-8")
         )
         assert report["product"]["slug"] == product["slug"]
         assert report["summary"]["confirmed_draws"] == product["confirmed_draws"]
-        assert report["audit"]["suite_version"] == "1.0.0"
+        assert (
+            report["summary"]["data_quality"]["result_coverage_rate"]
+            == product["result_coverage_rate"]
+        )
+        assert (
+            report["summary"]["data_quality"]["prize_coverage_rate"]
+            == product["prize_coverage_rate"]
+        )
+        assert report["audit"]["suite_version"] == "2.0.0"
+        assert report["backtest"]["recent_model"]["strategy"] == "recent_frequency"
+        assert "recent_comparison" in report["backtest"]

@@ -12,7 +12,7 @@ from typing import Any
 from .catalog import AnalysisKind
 from .io import ProductDataset
 
-AUDIT_SUITE_VERSION = "1.0.0"
+AUDIT_SUITE_VERSION = "2.0.0"
 NORMAL = NormalDist()
 
 FAMILY_DESCRIPTIONS = [
@@ -40,6 +40,212 @@ FAMILY_DESCRIPTIONS = [
         "id": "co_occurrence",
         "label": "Đồng xuất hiện",
         "plain_language": "Kiểm tra các cặp số hoặc mẫu lặp xuất hiện nhiều hơn mức nền hay không.",
+    },
+]
+
+EFFECT_THRESHOLD_SENSITIVITY_MULTIPLIERS = [0.5, 1.0, 1.5, 2.0]
+
+EFFECT_THRESHOLD_REGISTRY = [
+    {
+        "id": "cohen_w_0_05",
+        "effect_size_name": "Cohen's w",
+        "threshold": 0.05,
+        "unit": "w = sqrt(chi_square / pooled category observations)",
+        "scope": "Kiểm định phân bố biên cho tập số và chuỗi chữ số.",
+        "reference_or_rationale": (
+            "Cohen thường xem w=0,10 là hiệu ứng nhỏ. Dự án dùng 0,05 như ngưỡng "
+            "sàng lọc bảo thủ hơn vì sai lệch xổ số, nếu có, được kỳ vọng rất nhỏ "
+            "và vẫn phải vượt hiệu chỉnh nhiều kiểm định."
+        ),
+        "sensitivity_method": (
+            "Đếm lại số phép kiểm đạt ngưỡng khi nhân ngưỡng đã khóa với 0,5; 1,0; 1,5; 2,0."
+        ),
+        "applies_to": [
+            "number_marginal_chi_square",
+            "digit_marginal_chi_square",
+        ],
+    },
+    {
+        "id": "likelihood_w_0_05",
+        "effect_size_name": "likelihood w",
+        "threshold": 0.05,
+        "unit": "w = sqrt(g_statistic / pooled category observations)",
+        "scope": "G-test cho cùng câu hỏi phân bố biên với chi-square.",
+        "reference_or_rationale": (
+            "Dùng cùng mốc 0,05 với Cohen's w để hai phép kiểm cùng họ không tạo "
+            "hai tiêu chuẩn thực dụng khác nhau cho cùng một sai lệch phân bố."
+        ),
+        "sensitivity_method": (
+            "Đếm lại số phép kiểm đạt ngưỡng khi nhân ngưỡng đã khóa với 0,5; 1,0; 1,5; 2,0."
+        ),
+        "applies_to": [
+            "number_marginal_g_test",
+            "digit_marginal_g_test",
+        ],
+    },
+    {
+        "id": "absolute_z_per_sqrt_n_0_10",
+        "effect_size_name": "absolute z per sqrt(n)",
+        "threshold": 0.10,
+        "unit": "|z| / sqrt(n)",
+        "scope": "Runs test trên chuỗi tổng bộ số hoặc giá trị chuỗi.",
+        "reference_or_rationale": (
+            "Chuẩn hóa z theo căn cỡ mẫu để mẫu rất lớn không tự biến sai lệch nhỏ "
+            "thành tín hiệu thực dụng. Mốc 0,10 là mức tối thiểu trước khi coi nhịp "
+            "cao-thấp là đủ lớn để theo dõi."
+        ),
+        "sensitivity_method": (
+            "Đếm lại số phép kiểm đạt ngưỡng khi nhân ngưỡng đã khóa với 0,5; 1,0; 1,5; 2,0."
+        ),
+        "applies_to": [
+            "number_sum_runs",
+            "digit_value_runs",
+        ],
+    },
+    {
+        "id": "absolute_correlation_0_05",
+        "effect_size_name": "absolute correlation",
+        "threshold": 0.05,
+        "unit": "|r|",
+        "scope": "Tự tương quan lag-1 của tổng bộ số hoặc giá trị chuỗi.",
+        "reference_or_rationale": (
+            "Tương quan 0,05 là hiệu ứng rất nhỏ theo thang r, nhưng vẫn đủ đáng chú ý "
+            "trong bối cảnh xổ số nếu ổn định ngoài mẫu và vượt hiệu chỉnh."
+        ),
+        "sensitivity_method": (
+            "Đếm lại số phép kiểm đạt ngưỡng khi nhân ngưỡng đã khóa với 0,5; 1,0; 1,5; 2,0."
+        ),
+        "applies_to": [
+            "number_sum_lag1_autocorrelation",
+            "digit_value_lag1_autocorrelation",
+        ],
+    },
+    {
+        "id": "standardized_mean_difference_0_15",
+        "effect_size_name": "standardized mean difference",
+        "threshold": 0.15,
+        "unit": "|mean_2 - mean_1| / pooled_sd",
+        "scope": "So sánh split-half giữa nửa đầu và nửa sau lịch sử.",
+        "reference_or_rationale": (
+            "Mốc này thấp hơn quy ước small-effect 0,20 của standardized mean "
+            "difference để phục vụ cảnh báo sớm, nhưng vẫn buộc sai lệch phải lớn "
+            "hơn nhiễu rất nhỏ của mẫu lớn."
+        ),
+        "sensitivity_method": (
+            "Đếm lại số phép kiểm đạt ngưỡng khi nhân ngưỡng đã khóa với 0,5; 1,0; 1,5; 2,0."
+        ),
+        "applies_to": [
+            "number_sum_split_half_change",
+            "digit_sum_split_half_change",
+        ],
+    },
+    {
+        "id": "cramers_style_w_0_05",
+        "effect_size_name": "Cramer's style w",
+        "threshold": 0.05,
+        "unit": "w = sqrt(chi_square / stratified observations)",
+        "scope": "Kiểm định dị biệt theo tháng cho số hoặc chữ số.",
+        "reference_or_rationale": (
+            "Dùng cùng mốc sàng lọc 0,05 với các kiểm định chi-square phân bố, vì "
+            "đây vẫn là độ lệch chuẩn hóa từ bảng phân loại nhưng có thêm tầng tháng."
+        ),
+        "sensitivity_method": (
+            "Đếm lại số phép kiểm đạt ngưỡng khi nhân ngưỡng đã khóa với 0,5; 1,0; 1,5; 2,0."
+        ),
+        "applies_to": [
+            "number_month_heterogeneity",
+            "digit_month_heterogeneity",
+        ],
+    },
+    {
+        "id": "gap_ratio_4_0",
+        "effect_size_name": "gap divided by expected gap",
+        "threshold": 4.0,
+        "unit": "current_gap_draws / expected_gap_draws",
+        "scope": "Số đang vắng lâu nhất trong sản phẩm chọn tập số.",
+        "reference_or_rationale": (
+            "Khoảng vắng phải đạt ít nhất bốn lần khoảng vắng kỳ vọng mới được xem "
+            "là lớn về thực dụng, vì trong không gian nhiều số luôn có một số đang vắng lâu."
+        ),
+        "sensitivity_method": (
+            "Đếm lại số phép kiểm đạt ngưỡng khi nhân ngưỡng đã khóa với 0,5; 1,0; 1,5; 2,0."
+        ),
+        "applies_to": ["number_current_gap_geometric"],
+    },
+    {
+        "id": "pair_co_occurrence_w_0_05",
+        "effect_size_name": "pair co-occurrence w",
+        "threshold": 0.05,
+        "unit": "w = sqrt(chi_square / pair observations)",
+        "scope": "Kiểm định đồng xuất hiện cặp số khi workflow đủ bộ nhớ để chạy.",
+        "reference_or_rationale": (
+            "Giữ cùng mốc 0,05 với kiểm định phân bố, nhưng diễn giải thận trọng hơn "
+            "vì các cặp trong cùng một kỳ không độc lập hoàn toàn."
+        ),
+        "sensitivity_method": (
+            "Đếm lại số phép kiểm đạt ngưỡng khi nhân ngưỡng đã khóa với 0,5; 1,0; 1,5; 2,0."
+        ),
+        "applies_to": ["number_pair_co_occurrence"],
+    },
+    {
+        "id": "odd_count_w_0_10",
+        "effect_size_name": "odd-count w",
+        "threshold": 0.10,
+        "unit": "w = sqrt(chi_square / draws)",
+        "scope": "Phân bố số lượng số lẻ trong một bộ chọn không lặp.",
+        "reference_or_rationale": (
+            "Số chẵn-lẻ là đặc trưng tổng hợp thô nên yêu cầu mốc 0,10, tránh báo "
+            "tín hiệu thực dụng từ dao động nhỏ của vài ô phân bố."
+        ),
+        "sensitivity_method": (
+            "Đếm lại số phép kiểm đạt ngưỡng khi nhân ngưỡng đã khóa với 0,5; 1,0; 1,5; 2,0."
+        ),
+        "applies_to": ["number_odd_count_hypergeometric"],
+    },
+    {
+        "id": "position_digit_w_0_05",
+        "effect_size_name": "position digit w",
+        "threshold": 0.05,
+        "unit": "w = sqrt(chi_square / position-digit observations)",
+        "scope": "Kiểm định chữ số theo vị trí cho Max 3D, Max 3D Pro, Max 4D và Bingo18.",
+        "reference_or_rationale": (
+            "Đây là tín hiệu đang cần tái kiểm tra ngoài mẫu nên giữ ngưỡng nhạy 0,05, "
+            "nhưng không tách từng ô thành kiểm định mới trên cùng dữ liệu."
+        ),
+        "sensitivity_method": (
+            "Đếm lại số phép kiểm đạt ngưỡng khi nhân ngưỡng đã khóa với 0,5; 1,0; 1,5; 2,0."
+        ),
+        "applies_to": ["digit_position_chi_square"],
+    },
+    {
+        "id": "digit_sum_w_0_10",
+        "effect_size_name": "digit-sum w",
+        "threshold": 0.10,
+        "unit": "w = sqrt(chi_square / outcomes)",
+        "scope": "Phân bố tổng chữ số của sản phẩm chuỗi chữ số.",
+        "reference_or_rationale": (
+            "Tổng chữ số gộp nhiều cấu hình khác nhau, vì vậy dùng mốc 0,10 để chỉ "
+            "đánh dấu sai lệch tổng hợp đủ lớn."
+        ),
+        "sensitivity_method": (
+            "Đếm lại số phép kiểm đạt ngưỡng khi nhân ngưỡng đã khóa với 0,5; 1,0; 1,5; 2,0."
+        ),
+        "applies_to": ["digit_sum_distribution"],
+    },
+    {
+        "id": "repeat_pairs_ratio_1_25",
+        "effect_size_name": "repeat pairs ratio",
+        "threshold": 1.25,
+        "unit": "observed duplicate pairs / expected duplicate pairs",
+        "scope": "Tỷ lệ chuỗi kết quả lặp trong không gian hữu hạn.",
+        "reference_or_rationale": (
+            "Chuỗi lặp là bình thường trong không gian hữu hạn; chỉ khi số cặp lặp "
+            "cao hơn kỳ vọng ít nhất 25% mới xem là đủ lớn để theo dõi."
+        ),
+        "sensitivity_method": (
+            "Đếm lại số phép kiểm đạt ngưỡng khi nhân ngưỡng đã khóa với 0,5; 1,0; 1,5; 2,0."
+        ),
+        "applies_to": ["digit_repeat_poisson"],
     },
 ]
 
@@ -112,6 +318,8 @@ def finalize_audits(product_reports: list[dict[str, Any]]) -> dict[str, Any]:
             "Đây không phải kết luận pháp lý hay kiểm toán vận hành."
         ),
         "families": FAMILY_DESCRIPTIONS,
+        "effect_thresholds": _effect_threshold_metadata(),
+        "threshold_sensitivity": _effect_threshold_sensitivity(product_reports),
         "deferred_methods": DEFERRED_METHODS,
         "summary": _global_summary(product_reports),
         "products": [
@@ -156,6 +364,10 @@ def audit_log_events(product_reports: list[dict[str, Any]]) -> Iterator[dict[str
                 "q_value_bh": test.get("q_value_bh"),
                 "q_value_global_bh": test.get("q_value_global_bh"),
                 "effect_size": test.get("effect_size"),
+                "practical_effect_threshold": test.get("practical_effect_threshold"),
+                "effect_threshold_id": test.get("effect_threshold_id"),
+                "statistically_notable": test.get("statistically_notable"),
+                "practically_large": test.get("practically_large"),
                 "interpretation": test["interpretation"],
             }
 
@@ -192,6 +404,7 @@ def _audit_payload(dataset: ProductDataset, tests: list[dict[str, Any]]) -> dict
         "audit_interval_draws": interval,
         "next_recommended_audit_after_draws": len(dataset.observations) + interval,
         "families": FAMILY_DESCRIPTIONS,
+        "effect_thresholds": _effect_threshold_metadata(),
         "status_counts": dict(Counter(test["status"] for test in tests)),
         "strongest_signal": _strongest_signal(tests),
         "conclusion": _audit_conclusion(tests),
@@ -763,6 +976,26 @@ def _digit_position_test(
         for position, char in enumerate(outcome):
             position_counts[position][int(char)] += 1
     expected = len(outcomes) / len(symbols)
+    residuals = [
+        {
+            "position": position + 1,
+            "digit": digit,
+            "observed": counter[digit],
+            "expected": _round(expected),
+            "standardized_residual": _round(
+                (counter[digit] - expected) / math.sqrt(expected)
+                if expected > 0
+                else 0.0
+            ),
+            "chi_square_contribution": _round(
+                ((counter[digit] - expected) ** 2) / expected
+                if expected > 0
+                else 0.0
+            ),
+        }
+        for position, counter in enumerate(position_counts)
+        for digit in symbols
+    ]
     statistic = sum(
         ((counter[digit] - expected) ** 2) / expected
         for counter in position_counts
@@ -783,6 +1016,14 @@ def _digit_position_test(
         effect_size=math.sqrt(statistic / (len(outcomes) * length)),
         practical_threshold=0.05,
         sample_size=len(outcomes),
+        parameters={
+            "expected_per_position_digit": _round(expected),
+            "position_residuals": residuals,
+            "residual_note": (
+                "Residual được công bố để giải thích đóng góp vào kiểm định tổng. "
+                "Không dùng từng ô như một kiểm định độc lập mới."
+            ),
+        },
     )
 
 
@@ -887,9 +1128,12 @@ def _test_result(
         "effect_size_name": effect_size_name,
         "effect_size": _round(effect_size),
         "practical_effect_threshold": practical_threshold,
+        "effect_threshold_id": _effect_threshold_id(effect_size_name, practical_threshold),
         "sample_size": sample_size,
         "parameters": parameters or {},
         "status": "pending",
+        "statistically_notable": False,
+        "practically_large": False,
         "interpretation": "",
     }
 
@@ -919,10 +1163,102 @@ def _skipped_test(
         "effect_size_name": None,
         "effect_size": None,
         "practical_effect_threshold": None,
+        "effect_threshold_id": None,
         "sample_size": sample_size,
         "parameters": parameters or {},
         "status": "skipped",
+        "statistically_notable": False,
+        "practically_large": False,
         "interpretation": "Tạm hoãn để giữ workflow tự động đủ nhẹ và có thể tái lập hằng ngày.",
+    }
+
+
+def _effect_threshold_metadata() -> list[dict[str, Any]]:
+    return [
+        {
+            **entry,
+            "applies_to": list(entry["applies_to"]),
+        }
+        for entry in EFFECT_THRESHOLD_REGISTRY
+    ]
+
+
+def _effect_threshold_id(effect_size_name: str, threshold: float) -> str:
+    for entry in EFFECT_THRESHOLD_REGISTRY:
+        if entry["effect_size_name"] == effect_size_name and math.isclose(
+            float(entry["threshold"]),
+            float(threshold),
+        ):
+            return str(entry["id"])
+    return "unregistered"
+
+
+def _effect_threshold_sensitivity(
+    product_reports: list[dict[str, Any]],
+) -> dict[str, Any]:
+    tests = [
+        {
+            "product": report["product"]["slug"],
+            **test,
+        }
+        for report in product_reports
+        for test in report.get("audit", {}).get("tests", [])
+        if isinstance(test.get("effect_size"), (int, float))
+        and isinstance(test.get("practical_effect_threshold"), (int, float))
+    ]
+    return {
+        "method": "threshold_multiplier_sweep",
+        "multipliers": EFFECT_THRESHOLD_SENSITIVITY_MULTIPLIERS,
+        "global": [
+            _effect_sensitivity_row(tests, multiplier)
+            for multiplier in EFFECT_THRESHOLD_SENSITIVITY_MULTIPLIERS
+        ],
+        "by_threshold": [
+            {
+                "id": entry["id"],
+                "effect_size_name": entry["effect_size_name"],
+                "base_threshold": entry["threshold"],
+                "unit": entry["unit"],
+                "test_count": sum(
+                    test.get("effect_threshold_id") == entry["id"] for test in tests
+                ),
+                "scenarios": [
+                    _effect_sensitivity_row(
+                        [
+                            test
+                            for test in tests
+                            if test.get("effect_threshold_id") == entry["id"]
+                        ],
+                        multiplier,
+                    )
+                    for multiplier in EFFECT_THRESHOLD_SENSITIVITY_MULTIPLIERS
+                ],
+            }
+            for entry in EFFECT_THRESHOLD_REGISTRY
+        ],
+    }
+
+
+def _effect_sensitivity_row(
+    tests: list[dict[str, Any]],
+    multiplier: float,
+) -> dict[str, Any]:
+    practically_large = [
+        test
+        for test in tests
+        if abs(float(test["effect_size"]))
+        >= abs(float(test["practical_effect_threshold"])) * multiplier
+    ]
+    both = [
+        test
+        for test in practically_large
+        if float(_test_q_value(test)) < 0.05
+    ]
+    return {
+        "threshold_multiplier": multiplier,
+        "test_count": len(tests),
+        "practically_large_count": len(practically_large),
+        "both_count": len(both),
     }
 
 
@@ -941,38 +1277,56 @@ def _refresh_test_statuses(tests: list[dict[str, Any]]) -> None:
     for test in tests:
         if test.get("status") == "skipped":
             continue
-        q_value = test.get("q_value_global_bh") or test.get("q_value_bh") or 1.0
+        q_value = test.get("q_value_global_bh")
+        if q_value is None:
+            q_value = test.get("q_value_bh")
+        if q_value is None:
+            q_value = 1.0
         effect = abs(float(test.get("effect_size") or 0.0))
         threshold = abs(float(test.get("practical_effect_threshold") or 0.0))
-        if q_value < 0.01 and effect >= threshold:
-            status = "review"
+        statistically_notable = float(q_value) < 0.05
+        practically_large = bool(threshold and effect >= threshold)
+        test["statistically_notable"] = statistically_notable
+        test["practically_large"] = practically_large
+        if statistically_notable and practically_large:
+            status = "both"
             interpretation = (
-                "Tín hiệu vượt ngưỡng thống kê sau hiệu chỉnh và có độ lớn đáng đọc kỹ. "
+                "Tín hiệu vừa vượt ngưỡng thống kê sau hiệu chỉnh, vừa đạt ngưỡng độ lớn thực dụng. "
                 "Cần đối chiếu nguồn dữ liệu, giả định kiểm định và dữ liệu vận hành nếu có."
             )
-        elif q_value < 0.05 or (threshold and effect >= threshold):
-            status = "watch"
+        elif statistically_notable:
+            status = "statistically_notable"
             interpretation = (
-                "Có dấu hiệu cần theo dõi, nhưng chưa đủ để kết luận nguyên nhân hay khả năng dự đoán."
+                "Kết quả vượt ngưỡng thống kê sau hiệu chỉnh nhưng chưa đạt ngưỡng độ lớn thực dụng. "
+                "Mẫu lớn có thể làm sai lệch rất nhỏ trở nên nổi bật."
+            )
+        elif practically_large:
+            status = "practically_large"
+            interpretation = (
+                "Độ lớn đạt ngưỡng thực dụng đã khóa trước nhưng q chưa vượt ngưỡng thống kê. "
+                "Cần thêm dữ liệu hoặc kiểm tra độ nhạy trước khi diễn giải."
             )
         else:
             status = "pass"
-            interpretation = "Chưa thấy sai lệch đủ mạnh theo tiêu chí đã khóa trước."
+            interpretation = (
+                "Chưa vượt ngưỡng thống kê sau hiệu chỉnh và chưa đạt ngưỡng độ lớn thực dụng."
+            )
         test["status"] = status
         test["interpretation"] = interpretation
 
 
 def _audit_conclusion(tests: list[dict[str, Any]]) -> str:
     counts = Counter(test["status"] for test in tests)
-    if counts["review"]:
+    if counts["both"]:
         return (
-            f"Có {counts['review']} kiểm định cần đọc kỹ. Đây là tín hiệu thống kê, "
-            "không phải kết luận về quy trình vận hành."
+            f"Có {counts['both']} kiểm định đồng thời nổi bật về thống kê và độ lớn thực dụng. "
+            "Đây vẫn chưa phải kết luận về nguyên nhân hay quy trình vận hành."
         )
-    if counts["watch"]:
+    one_condition = counts["statistically_notable"] + counts["practically_large"]
+    if one_condition:
         return (
-            f"Có {counts['watch']} kiểm định ở mức theo dõi. Chưa đủ bằng chứng để bác bỏ "
-            "mô hình ngẫu nhiên theo cách thực dụng."
+            f"Có {one_condition} kiểm định chỉ đạt một trong hai điều kiện thống kê hoặc "
+            "độ lớn thực dụng. Cần đọc riêng lý do thay vì gộp thành một nhãn theo dõi."
         )
     return "Chưa thấy kiểm định nào vượt ngưỡng theo dõi sau hiệu chỉnh nhiều kiểm định."
 
@@ -983,8 +1337,13 @@ def _strongest_signal(tests: list[dict[str, Any]]) -> dict[str, Any] | None:
     ranked = sorted(
         tests,
         key=lambda test: (
-            {"review": 0, "watch": 1, "pass": 2}.get(test["status"], 3),
-            test.get("q_value_global_bh") or test.get("q_value_bh") or 1.0,
+            {
+                "both": 0,
+                "statistically_notable": 1,
+                "practically_large": 2,
+                "pass": 3,
+            }.get(test["status"], 4),
+            _test_q_value(test),
             -abs(float(test.get("effect_size") or 0.0)),
         ),
     )
@@ -998,6 +1357,9 @@ def _strongest_signal(tests: list[dict[str, Any]]) -> dict[str, Any] | None:
         "q_value_bh": top.get("q_value_bh"),
         "q_value_global_bh": top.get("q_value_global_bh"),
         "effect_size": top.get("effect_size"),
+        "practical_effect_threshold": top.get("practical_effect_threshold"),
+        "statistically_notable": top.get("statistically_notable"),
+        "practically_large": top.get("practically_large"),
         "interpretation": top["interpretation"],
     }
 
@@ -1009,37 +1371,45 @@ def _global_summary(product_reports: list[dict[str, Any]]) -> dict[str, Any]:
         for test in report.get("audit", {}).get("tests", [])
     ]
     counts = Counter(test["status"] for test in all_tests)
-    products_with_review = [
+    products_with_both = [
         report["product"]["slug"]
         for report in product_reports
-        if report.get("audit", {}).get("status_counts", {}).get("review", 0)
+        if report.get("audit", {}).get("status_counts", {}).get("both", 0)
     ]
-    products_with_watch = [
+    products_with_single_condition = [
         report["product"]["slug"]
         for report in product_reports
-        if report.get("audit", {}).get("status_counts", {}).get("watch", 0)
+        if (
+            report.get("audit", {}).get("status_counts", {}).get(
+                "statistically_notable", 0
+            )
+            or report.get("audit", {}).get("status_counts", {}).get(
+                "practically_large", 0
+            )
+        )
     ]
     return {
         "product_count": len(product_reports),
         "test_count": len(all_tests),
         "status_counts": dict(counts),
-        "products_with_review": products_with_review,
-        "products_with_watch": products_with_watch,
+        "products_with_both": products_with_both,
+        "products_with_single_condition": products_with_single_condition,
         "strongest_signal": _strongest_signal(all_tests),
         "conclusion": _global_conclusion(counts),
     }
 
 
 def _global_conclusion(counts: Counter[str]) -> str:
-    if counts["review"]:
+    if counts["both"]:
         return (
-            f"Có {counts['review']} kiểm định ở mức cần đọc kỹ trên toàn bộ sản phẩm. "
-            "Cần xem từng phép thử trước khi diễn giải."
+            f"Có {counts['both']} kiểm định đồng thời nổi bật về thống kê và độ lớn thực dụng. "
+            "Cần kiểm tra nguồn, giả định và khả năng tái lập trước khi diễn giải."
         )
-    if counts["watch"]:
+    one_condition = counts["statistically_notable"] + counts["practically_large"]
+    if one_condition:
         return (
-            f"Có {counts['watch']} kiểm định ở mức theo dõi. Bộ dữ liệu hiện chưa đủ để kết luận "
-            "về uy tín vận hành, nhưng đủ để lập danh sách tín hiệu cần quan sát tiếp."
+            f"Có {one_condition} kiểm định chỉ đạt một trong hai điều kiện thống kê hoặc độ lớn "
+            "thực dụng. Bộ dữ liệu chưa đủ để kết luận về uy tín vận hành."
         )
     return (
         "Tại snapshot hiện tại, bộ kiểm định chưa phát hiện sai lệch đủ mạnh sau hiệu chỉnh "
@@ -1126,3 +1496,13 @@ def _sequence_sum_probabilities(length: int, symbols: list[int]) -> dict[int, fl
 
 def _round(value: float, digits: int = 6) -> float:
     return round(float(value), digits)
+
+
+def _test_q_value(test: dict[str, Any]) -> float:
+    global_value = test.get("q_value_global_bh")
+    if isinstance(global_value, (int, float)):
+        return float(global_value)
+    local_value = test.get("q_value_bh")
+    if isinstance(local_value, (int, float)):
+        return float(local_value)
+    return 1.0

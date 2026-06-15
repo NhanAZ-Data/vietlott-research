@@ -45,6 +45,7 @@ def test_weather_update_writes_csv_and_metadata(
     metadata = (tmp_path / "metadata.json").read_text(encoding="utf-8")
     assert "ERA5-Land" in metadata
     assert "Tam Trinh" in metadata
+    assert "generated_at" in metadata
 
 
 def test_weather_update_never_shrinks_existing_cache(

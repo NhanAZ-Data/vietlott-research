@@ -11,8 +11,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,500;1,400;1,500&amp;display=swap">
   <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/3.0.0/uicons-regular-rounded/css/uicons-regular-rounded.css">
-  <link rel="stylesheet" href="assets/styles.css?v=20260615-9">
-  <script src="assets/docs.js?v=20260614-2" defer></script>
+  <link rel="stylesheet" href="assets/styles.css?v=20260615-12">
+  <script src="assets/docs.js?v=20260615-1" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Bỏ qua điều hướng</a>
@@ -48,6 +48,7 @@
       <aside class="document-toc">
         <strong>Mục lục</strong>
         <a href="#bao-phu">Độ bao phủ</a>
+        <a href="#chat-luong-nguon">Chất lượng nguồn</a>
         <a href="#nguon">Nguồn dữ liệu</a>
         <a href="#schema">Schema</a>
         <a href="#tai">Tải và đọc</a>
@@ -69,8 +70,25 @@
           </p>
         </section>
 
-        <section id="nguon">
+        <section id="chat-luong-nguon">
           <p class="article-index">02</p>
+          <h2>Chất lượng nguồn và mức đối chiếu</h2>
+          <p>
+            "Đã xác nhận" chỉ cho biết dòng được dùng trong phân tích. Nó không đồng nghĩa
+            Vietlott đã xác nhận trực tiếp. Bảng dưới tách riêng nguồn chính thức, bằng chứng
+            đối chiếu, độ phủ kết quả và độ phủ giải thưởng.
+          </p>
+          <div id="source-quality-table" class="table-wrap">
+            <p>Đang đọc báo cáo chất lượng nguồn...</p>
+          </div>
+          <p>
+            Các tỷ lệ thấp không tự chứng minh dữ liệu sai. Chúng cho biết mức bằng chứng
+            provenance còn hạn chế và nơi cần ưu tiên truy ngược hoặc đối chiếu thêm.
+          </p>
+        </section>
+
+        <section id="nguon">
+          <p class="article-index">03</p>
           <h2>Nguồn và thứ tự ưu tiên</h2>
           <ol class="source-order">
             <li><strong>Trang công khai chính thức Vietlott</strong><span>Kết quả, trang chi tiết, PDF và thông tin giải.</span></li>
@@ -102,7 +120,7 @@
         </section>
 
         <section id="schema">
-          <p class="article-index">03</p>
+          <p class="article-index">04</p>
           <h2>Schema kỳ quay</h2>
           <div class="code-block">
             <code>product, draw_id, draw_date, draw_status, result_json,<br>
@@ -123,7 +141,7 @@
         </section>
 
         <section id="tai">
-          <p class="article-index">04</p>
+          <p class="article-index">05</p>
           <h2>Tải và đọc dữ liệu</h2>
           <div class="download-grid">
             <a href="https://github.com/NhanAZ/vietlott-data-research/tree/main/datasets/draws">
@@ -133,7 +151,13 @@
               <span>CSV giải thưởng</span><strong>datasets/prizes</strong>
             </a>
             <a href="https://github.com/NhanAZ/vietlott-data-research/blob/main/datasets/metadata/dataset-summary.json">
-              <span>Manifest kiểm toán</span><strong>dataset-summary.json</strong>
+              <span>Tóm tắt số dòng</span><strong>dataset-summary.json</strong>
+            </a>
+            <a href="https://github.com/NhanAZ/vietlott-data-research/blob/main/datasets/metadata/quality-report.json">
+              <span>Kiểm toán chất lượng và provenance</span><strong>quality-report.json</strong>
+            </a>
+            <a href="https://github.com/NhanAZ/vietlott-data-research/blob/main/datasets/metadata/snapshot-manifest.json">
+              <span>Manifest hash của snapshot</span><strong>snapshot-manifest.json</strong>
             </a>
             <a href="https://github.com/NhanAZ/vietlott-data-research/blob/main/datasets/weather/daily.csv">
               <span>CSV nhiệt độ và độ ẩm</span><strong>datasets/weather/daily.csv</strong>
@@ -150,6 +174,12 @@
             <a href="data/analysis-export.json">
               <span>Toàn bộ dữ liệu phân tích trên web</span><strong>analysis-export.json</strong>
             </a>
+            <a href="data/analysis-export.schema.json">
+              <span>JSON Schema của gói phân tích</span><strong>analysis-export.schema.json</strong>
+            </a>
+            <a href="data/snapshot-manifest.json">
+              <span>Danh mục tệp thô kèm SHA-256</span><strong>snapshot-manifest.json</strong>
+            </a>
           </div>
           <p>Kết hợp các phân vùng thành hai CSV làm việc</p>
           <pre><code>vietlott-repository-data hydrate --source-dir datasets --destination-dir data</code></pre>
@@ -164,7 +194,7 @@ sample = draws.loc[draws["draw_status"] == "confirmed"].copy()</code></pre>
         </section>
 
         <section id="xuat-ai">
-          <p class="article-index">05</p>
+          <p class="article-index">06</p>
           <h2>Gói phân tích đầy đủ cho Data Analytics AI</h2>
           <p>
             Website là bản đọc nhanh. Tệp
@@ -182,7 +212,10 @@ sample = draws.loc[draws["draw_status"] == "confirmed"].copy()</code></pre>
           <p>
             Gói này không nhúng hàng trăm nghìn kỳ quay thô để tránh tạo một tệp quá
             lớn. Trường <code>source_files</code> chỉ tới CSV kỳ quay, giải thưởng,
-            thời tiết và sổ dự đoán gốc. AI nên đọc gói JSON trước để hiểu cấu trúc,
+            thời tiết và sổ dự đoán gốc. <code>raw_data_catalog</code> liệt kê từng tệp
+            dữ liệu thô cùng kích thước, số dòng và SHA-256. Gói được kiểm tra bằng
+            <a href="data/analysis-export.schema.json"><code>analysis-export.schema.json</code></a>.
+            AI nên đọc gói JSON trước để hiểu cấu trúc,
             sau đó tải CSV khi cần tính lại ở cấp từng kỳ.
           </p>
           <pre><code>import json
@@ -205,7 +238,7 @@ audit_rows = [
         </section>
 
         <section id="tai-lap">
-          <p class="article-index">06</p>
+          <p class="article-index">07</p>
           <h2>Tái lập website và báo cáo</h2>
           <p>
             Toàn bộ JSON biểu đồ và sổ dự đoán được tạo bởi package
@@ -224,7 +257,7 @@ audit_rows = [
         </section>
 
         <section id="phap-ly">
-          <p class="article-index">07</p>
+          <p class="article-index">08</p>
           <h2>Pháp lý, nguồn gốc và trách nhiệm</h2>
           <p>
             Dự án lưu sự kiện kết quả và thông tin nguồn công khai cho mục đích cá

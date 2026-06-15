@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 from collections import Counter
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
 from urllib.parse import urlparse
+
+from vietlott_collector.provenance import assess_provenance
 
 from .catalog import AnalysisKind, AnalyticsProduct
 
@@ -33,6 +36,8 @@ class ProductDataset:
     data_source_counts: Counter[str] = field(default_factory=Counter)
     status_counts: Counter[str] = field(default_factory=Counter)
     validation_counts: Counter[str] = field(default_factory=Counter)
+    source_origin_counts: Counter[str] = field(default_factory=Counter)
+    source_verification_counts: Counter[str] = field(default_factory=Counter)
     latest_fetched_at: str = ""
     jackpot_values: list[tuple[str, int]] = field(default_factory=list)
 
@@ -53,6 +58,21 @@ class ProductDataset:
             special = ""
         return f"{self.product.slug}|{latest.draw_id}|{latest.draw_date}|{payload}|{special}"
 
+    @property
+    def history_fingerprint(self) -> str:
+        digest = hashlib.sha256()
+        digest.update(f"{self.product.slug}|{len(self.observations)}\n".encode())
+        for observation in self.observations:
+            payload = (
+                observation.draw_id,
+                observation.draw_date.isoformat(),
+                ",".join(str(value) for value in observation.values),
+                ",".join(str(value) for value in observation.special_values),
+                ",".join(observation.outcomes),
+            )
+            digest.update(("|".join(payload) + "\n").encode())
+        return digest.hexdigest()
+
 
 def load_product_dataset(root: Path, product: AnalyticsProduct) -> ProductDataset:
     dataset = ProductDataset(product=product)
@@ -67,6 +87,11 @@ def load_product_dataset(root: Path, product: AnalyticsProduct) -> ProductDatase
                 status = row.get("draw_status", "confirmed") or "confirmed"
                 dataset.status_counts[status] += 1
                 dataset.validation_counts[row.get("validation_status", "unchecked")] += 1
+                assessment = assess_provenance(row)
+                dataset.source_origin_counts[assessment.source_origin.value] += 1
+                dataset.source_verification_counts[
+                    assessment.source_verification.value
+                ] += 1
                 dataset.latest_fetched_at = max(
                     dataset.latest_fetched_at,
                     row.get("fetched_at", ""),

@@ -14,6 +14,7 @@ from typing import Literal
 import pandas as pd
 
 from .models import DrawRecord, PrizeRecord
+from .provenance import append_source_history
 
 LOGGER = logging.getLogger(__name__)
 OutputFormat = Literal["csv", "parquet"]
@@ -409,6 +410,14 @@ class SqliteDatasetStore:
                     stats["changed"] = int(stats["changed"]) + 1
 
                 attributes = _json_object(old["attributes_json"])
+                append_source_history(
+                    attributes,
+                    source_url=str(old["source_url"]),
+                    data_source=str(attributes.get("data_source", "unknown")),
+                    draw_date=str(old["draw_date"]),
+                    result_json=str(old["result_json"]),
+                    observed_at=str(old["fetched_at"]),
+                )
                 provenance_changed = (
                     "secondary_source_url" in attributes
                     or "upstream_claimed_source" in attributes

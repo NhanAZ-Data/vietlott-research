@@ -1,4 +1,5 @@
 import csv
+import json
 from datetime import date
 
 from vietlott_collector.models import DrawRecord, PrizeRecord
@@ -13,6 +14,9 @@ from vietlott_collector.storage import SqliteDatasetStore
 def test_publish_and_hydrate_partitioned_dataset(tmp_path) -> None:
     data_dir = tmp_path / "data"
     dataset_dir = tmp_path / "datasets"
+    weather_dir = dataset_dir / "weather"
+    weather_dir.mkdir(parents=True)
+    (weather_dir / "daily.csv").write_text("date,temp\n2026-06-01,30\n", encoding="utf-8")
     store = SqliteDatasetStore(data_dir)
     try:
         store.upsert(
@@ -34,6 +38,17 @@ def test_publish_and_hydrate_partitioned_dataset(tmp_path) -> None:
     assert (dataset_dir / "draws" / "keno" / "2026-05.csv").exists()
     assert (dataset_dir / "draws" / "keno" / "2026-06.csv").exists()
     assert (dataset_dir / "draws" / "mega645" / "all.csv").exists()
+    assert (dataset_dir / "weather" / "daily.csv").exists()
+    quality_path = dataset_dir / "metadata" / "quality-report.json"
+    snapshot_path = dataset_dir / "metadata" / "snapshot-manifest.json"
+    assert quality_path.exists()
+    assert snapshot_path.exists()
+    quality = json.loads(quality_path.read_text(encoding="utf-8"))
+    assert quality["totals"]["draw_rows"] == 3
+    assert quality["products"]["keno"]["result_coverage"]["rate"] == 1.0
+    manifest = json.loads(snapshot_path.read_text(encoding="utf-8"))
+    assert manifest["dataset_rows"] == {"draws": 3, "prizes": 1}
+    assert "weather/daily.csv" in manifest["files"]
 
     hydrated = tmp_path / "hydrated"
     counts = hydrate_repository_data(dataset_dir, hydrated)
@@ -62,6 +77,39 @@ def test_reconcile_unchanged_official_row_is_stable(tmp_path) -> None:
 
         assert report["changed"] == 0
         assert before == after
+    finally:
+        store.close()
+
+
+def test_reconcile_preserves_previous_source_observation(tmp_path) -> None:
+    store = SqliteDatasetStore(tmp_path)
+    try:
+        record = _draw("mega645", "00001", date(2026, 6, 1))
+        record.attributes.update(
+            {
+                "data_source": "community_mirror",
+                "secondary_source_url": "https://example.test/mirror",
+            }
+        )
+        store.upsert([record], [])
+        official = _draw("mega645", "00001", date(2026, 6, 1))
+        official.attributes["data_source"] = "official_vietlott"
+
+        store.reconcile_official_draws([official])
+
+        row = store.load_draws().iloc[0]
+        attributes = json.loads(row["attributes_json"])
+        assert attributes["data_source"] == "official_vietlott"
+        assert attributes["source_history"] == [
+            {
+                "data_source": "community_mirror",
+                "draw_date": "2026-06-01",
+                "observed_at": record.fetched_at,
+                "result_json": record.to_row()["result_json"],
+                "source_url": record.source_url,
+            }
+        ]
+        assert "secondary_source_url" not in attributes
     finally:
         store.close()
 

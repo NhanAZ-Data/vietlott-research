@@ -140,6 +140,9 @@ def update_weather_dataset(
     _write_csv(csv_path, merged)
     metadata = {
         "schema_version": 1,
+        "generated_at": datetime.now(ZoneInfo(WEATHER_TIMEZONE))
+        .replace(microsecond=0)
+        .isoformat(),
         "source": "Open-Meteo Historical Weather API",
         "source_documentation": SOURCE_DOC_URL,
         "source_endpoint": ARCHIVE_URL,

@@ -13,8 +13,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,500;1,400;1,500&amp;display=swap">
   <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/3.0.0/uicons-regular-rounded/css/uicons-regular-rounded.css">
-  <link rel="stylesheet" href="assets/styles.css?v=20260615-9">
-  <script src="assets/app.js?v=20260615-8" defer></script>
+  <link rel="stylesheet" href="assets/styles.css?v=20260615-12">
+  <script src="assets/app.js?v=20260615-11" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Bỏ qua điều hướng</a>
@@ -191,14 +191,14 @@
           <small>Trên toàn bộ sản phẩm</small>
         </article>
         <article>
-          <span>Cần đọc kỹ</span>
+          <span>Đạt cả hai điều kiện</span>
           <strong id="audit-review-count">...</strong>
-          <small>Sau hiệu chỉnh toàn cục</small>
+          <small>q nhỏ và độ lớn đủ mạnh</small>
         </article>
         <article>
-          <span>Cần theo dõi</span>
+          <span>Chỉ đạt một điều kiện</span>
           <strong id="audit-watch-count">...</strong>
-          <small>Tín hiệu chưa đủ kết luận</small>
+          <small>Thống kê hoặc độ lớn thực dụng</small>
         </article>
       </div>
       <div class="audit-conclusion-card">
@@ -536,6 +536,9 @@
           <select id="prediction-product"></select>
           <span id="prediction-ledger-status">...</span>
         </div>
+        <p id="prediction-ledger-integrity" class="prediction-ledger-integrity">
+          Đang kiểm tra chuỗi hash của sổ dự đoán...
+        </p>
         <div id="prediction-cards" class="prediction-grid"></div>
         <section class="prediction-results" aria-labelledby="prediction-results-title">
           <div class="prediction-results-heading">

@@ -18,7 +18,8 @@ from typing import Any
 from .catalog import AnalysisKind, AnalyticsProduct
 from .io import Observation, ProductDataset
 
-MODEL_VERSION = "1.2.0"
+MODEL_VERSION = "1.3.0"
+LEDGER_CHAIN_VERSION = 1
 NUMBER_SCORE_POLICY = (
     "recent=0.6*short+0.4*recent; "
     "balanced=0.4*short+0.3*recent-0.15*long+0.15*overdue"
@@ -56,7 +57,9 @@ class PredictionLedger:
                         events.append(json.loads(line))
                     except json.JSONDecodeError as error:
                         raise ValueError(f"Invalid prediction ledger line {line_number}") from error
-        return cls(path=path, events=events)
+        ledger = cls(path=path, events=events)
+        ledger.validate_integrity()
+        return ledger
 
     def process_product(self, dataset: ProductDataset) -> None:
         predictions = {
@@ -101,6 +104,7 @@ class PredictionLedger:
                 self.events.append(forecast)
 
     def save(self) -> None:
+        self._seal_events()
         self.path.parent.mkdir(parents=True, exist_ok=True)
         temp_path = self.path.with_suffix(f"{self.path.suffix}.tmp")
         with temp_path.open("w", encoding="utf-8", newline="\n") as handle:
@@ -116,6 +120,37 @@ class PredictionLedger:
                     + "\n"
                 )
         temp_path.replace(self.path)
+
+    def validate_integrity(self) -> dict[str, object]:
+        if not self.events:
+            return _ledger_integrity_payload(self.events, "empty")
+        has_chain = [
+            all(key in event for key in ("ledger_index", "previous_event_hash", "event_hash"))
+            for event in self.events
+        ]
+        if not any(has_chain):
+            return _ledger_integrity_payload(self.events, "legacy_unsealed")
+        if not all(has_chain):
+            raise ValueError("Prediction ledger mixes sealed and unsealed historical events")
+        previous_hash: str | None = None
+        for index, event in enumerate(self.events):
+            if event.get("ledger_index") != index:
+                raise ValueError(f"Prediction ledger index mismatch at event {index}")
+            if event.get("previous_event_hash") != previous_hash:
+                raise ValueError(f"Prediction ledger chain break at event {index}")
+            expected_hash = _event_hash(event)
+            if event.get("event_hash") != expected_hash:
+                raise ValueError(f"Prediction ledger hash mismatch at event {index}")
+            previous_hash = expected_hash
+        return _ledger_integrity_payload(self.events, "valid")
+
+    def _seal_events(self) -> None:
+        previous_hash: str | None = None
+        for index, event in enumerate(self.events):
+            event["ledger_index"] = index
+            event["previous_event_hash"] = previous_hash
+            event["event_hash"] = _event_hash(event)
+            previous_hash = str(event["event_hash"])
 
     def site_report(self) -> dict[str, object]:
         predictions = [
@@ -232,9 +267,16 @@ class PredictionLedger:
             )
             for evaluation in evaluation_details
         }
+        embedded_latest_count = sum(
+            len(strategies) for strategies in latest_by_product.values()
+        )
+        pending_by_product = Counter(
+            str(prediction["product"]) for prediction in pending
+        )
         return {
             "schema_version": 2,
             "model_version": MODEL_VERSION,
+            "ledger_integrity": self.validate_integrity(),
             "principle": (
                 "Mọi dự đoán được ghi trước kết quả, giữ nguyên tham số và luôn so với "
                 "baseline chọn đồng đều."
@@ -244,6 +286,12 @@ class PredictionLedger:
                 for product, strategies in sorted(latest_by_product.items())
             },
             "pending_count": len(pending),
+            "embedded_pending_count": embedded_latest_count,
+            "pending_by_product": dict(sorted(pending_by_product.items())),
+            "pending_embedding_note": (
+                "latest chỉ nhúng dự đoán mới nhất của từng chiến lược để website gọn. "
+                "pending_count đếm toàn bộ dự đoán chưa có kết quả trong ledger."
+            ),
             "evaluation_count": len(evaluation_details),
             "outcome_summary": {
                 "evaluated_draws": len(evaluated_draws),
@@ -284,7 +332,7 @@ def finalize_backtests(product_reports: list[dict[str, Any]]) -> dict[str, Any]:
             continue
         completed_products += 1
         product_slug = str(report["product"]["slug"])
-        for key in ("comparison", "audit_comparison"):
+        for key in ("comparison", "recent_comparison", "audit_comparison"):
             comparison = backtest.get(key)
             if isinstance(comparison, dict) and isinstance(
                 comparison.get("approximate_p_value"),
@@ -336,7 +384,7 @@ def _forecast_events(dataset: ProductDataset) -> list[dict[str, Any]]:
     product = dataset.product
     latest = dataset.latest
     generated_at = dataset.latest_fetched_at or f"{latest.draw_date.isoformat()}T00:00:00+00:00"
-    fingerprint = hashlib.sha256(dataset.fingerprint.encode()).hexdigest()
+    fingerprint = dataset.history_fingerprint
     if product.kind is AnalysisKind.NUMBER_SET:
         forecasts = _number_forecasts(dataset)
     else:
@@ -360,9 +408,12 @@ def _forecast_events(dataset: ProductDataset) -> list[dict[str, Any]]:
                 "strategy": forecast["strategy"],
                 "strategy_label": forecast["strategy_label"],
                 "model_version": MODEL_VERSION,
+                "code_version": MODEL_VERSION,
                 "generated_at": generated_at,
+                "generated_at_timezone": "UTC",
                 "dataset_cutoff_draw_id": latest.draw_id,
                 "dataset_cutoff_date": latest.draw_date.isoformat(),
+                "dataset_cutoff_timezone": "Asia/Ho_Chi_Minh",
                 "dataset_fingerprint": fingerprint,
                 "target": "first_confirmed_draw_after_cutoff",
                 "prediction": forecast["prediction"],
@@ -566,10 +617,13 @@ def _number_backtest(dataset: ProductDataset) -> dict[str, object]:
     pair_counts = _number_pair_counts(pair_items)
 
     model_hits: list[int] = []
+    recent_hits: list[int] = []
     audit_hits: list[int] = []
     differences: list[float] = []
+    recent_differences: list[float] = []
     audit_differences: list[float] = []
     model_distribution = Counter()
+    recent_distribution = Counter()
     audit_distribution = Counter()
     expected_hits = (product.pick_count or 0) ** 2 / product.pool_size
     for index in range(start, len(observations)):
@@ -593,6 +647,12 @@ def _number_backtest(dataset: ProductDataset) -> dict[str, object]:
         _apply_audit_number_scores(scores, pair_scores)
         seed = f"backtest|{product.slug}|{target.draw_id}|{MODEL_VERSION}"
         model = _top_numbers(scores, "balanced", product.pick_count or 0, seed)
+        recent_model = _top_numbers(
+            scores,
+            "recent",
+            product.pick_count or 0,
+            seed + "|recent",
+        )
         audit_model = _audit_number_pick(
             scores,
             pair_scores,
@@ -601,12 +661,16 @@ def _number_backtest(dataset: ProductDataset) -> dict[str, object]:
         )
         actual = set(target.values)
         model_hit = len(actual.intersection(model))
+        recent_hit = len(actual.intersection(recent_model))
         audit_hit = len(actual.intersection(audit_model))
         model_hits.append(model_hit)
+        recent_hits.append(recent_hit)
         audit_hits.append(audit_hit)
         differences.append(float(model_hit - expected_hits))
+        recent_differences.append(float(recent_hit - expected_hits))
         audit_differences.append(float(audit_hit - expected_hits))
         model_distribution[model_hit] += 1
+        recent_distribution[recent_hit] += 1
         audit_distribution[audit_hit] += 1
 
         total_counts.update(target.values)
@@ -629,8 +693,10 @@ def _number_backtest(dataset: ProductDataset) -> dict[str, object]:
             _update_number_pair_counts(pair_counts, expired_pair, -1)
 
     z_score, p_value = _paired_normal_test(differences)
+    recent_z_score, recent_p_value = _paired_normal_test(recent_differences)
     audit_z_score, audit_p_value = _paired_normal_test(audit_differences)
     difference_interval = _normal_mean_interval(differences)
+    recent_difference_interval = _normal_mean_interval(recent_differences)
     audit_difference_interval = _normal_mean_interval(audit_differences)
     baseline_distribution = _number_uniform_distribution(
         product.pool_size,
@@ -639,6 +705,9 @@ def _number_backtest(dataset: ProductDataset) -> dict[str, object]:
     )
     exact_probability = 1 / math.comb(product.pool_size, product.pick_count or 0)
     comparison_wins = fmean(differences) > 0 and p_value < 0.05
+    recent_comparison_wins = (
+        fmean(recent_differences) > 0 and recent_p_value < 0.05
+    )
     audit_comparison_wins = fmean(audit_differences) > 0 and audit_p_value < 0.05
     return {
         "schema_version": 2,
@@ -659,6 +728,12 @@ def _number_backtest(dataset: ProductDataset) -> dict[str, object]:
             "average_hits": _round(fmean(model_hits)),
             "exact_hits": model_distribution[product.pick_count or 0],
             "hit_distribution": _counter_to_rows(model_distribution),
+        },
+        "recent_model": {
+            "strategy": "recent_frequency",
+            "average_hits": _round(fmean(recent_hits)),
+            "exact_hits": recent_distribution[product.pick_count or 0],
+            "hit_distribution": _counter_to_rows(recent_distribution),
         },
         "audit_model": {
             "strategy": "audit_signal",
@@ -681,6 +756,14 @@ def _number_backtest(dataset: ProductDataset) -> dict[str, object]:
             "approximate_p_value": _round(p_value, 8),
             **difference_interval,
             "beats_baseline_unadjusted": comparison_wins,
+            "beats_baseline": False,
+        },
+        "recent_comparison": {
+            "mean_hit_difference": _round(fmean(recent_differences)),
+            "paired_z_score": _round(recent_z_score),
+            "approximate_p_value": _round(recent_p_value, 8),
+            **recent_difference_interval,
+            "beats_baseline_unadjusted": recent_comparison_wins,
             "beats_baseline": False,
         },
         "audit_comparison": {
@@ -725,8 +808,10 @@ def _digit_backtest(dataset: ProductDataset) -> dict[str, object]:
         _update_digit_counts(short, item.outcomes, 1)
 
     model_exact = 0
+    recent_exact = 0
     audit_exact = 0
     model_best: list[int] = []
+    recent_best: list[int] = []
     audit_best: list[int] = []
     baseline_best_expected: list[float] = []
     baseline_exact_expected: list[float] = []
@@ -735,6 +820,14 @@ def _digit_backtest(dataset: ProductDataset) -> dict[str, object]:
         target = observations[index]
         seed = f"backtest|{product.slug}|{target.draw_id}|{MODEL_VERSION}"
         model = _digit_sequence_from_scores(total, recent, short, symbols, "balanced", seed)
+        recent_model = _digit_sequence_from_scores(
+            total,
+            recent,
+            short,
+            symbols,
+            "recent",
+            seed + "|recent",
+        )
         audit_model = _digit_sequence_from_scores(
             total,
             recent,
@@ -750,8 +843,10 @@ def _digit_backtest(dataset: ProductDataset) -> dict[str, object]:
             expected_score_distribution,
         ) = _digit_uniform_expectation(actual, symbols, length)
         model_exact += model in actual
+        recent_exact += recent_model in actual
         audit_exact += audit_model in actual
         model_best.append(_best_position_match(model, actual))
+        recent_best.append(_best_position_match(recent_model, actual))
         audit_best.append(_best_position_match(audit_model, actual))
         baseline_best_expected.append(expected_best_match)
         baseline_exact_expected.append(expected_exact_probability)
@@ -776,15 +871,28 @@ def _digit_backtest(dataset: ProductDataset) -> dict[str, object]:
         float(model - baseline)
         for model, baseline in zip(model_best, baseline_best_expected, strict=True)
     ]
+    recent_differences = [
+        float(model - baseline)
+        for model, baseline in zip(
+            recent_best,
+            baseline_best_expected,
+            strict=True,
+        )
+    ]
     audit_differences = [
         float(model - baseline)
         for model, baseline in zip(audit_best, baseline_best_expected, strict=True)
     ]
     z_score, p_value = _paired_normal_test(differences)
+    recent_z_score, recent_p_value = _paired_normal_test(recent_differences)
     audit_z_score, audit_p_value = _paired_normal_test(audit_differences)
     difference_interval = _normal_mean_interval(differences)
+    recent_difference_interval = _normal_mean_interval(recent_differences)
     audit_difference_interval = _normal_mean_interval(audit_differences)
     comparison_wins = fmean(differences) > 0 and p_value < 0.05
+    recent_comparison_wins = (
+        fmean(recent_differences) > 0 and recent_p_value < 0.05
+    )
     audit_comparison_wins = fmean(audit_differences) > 0 and audit_p_value < 0.05
     return {
         "schema_version": 2,
@@ -806,6 +914,12 @@ def _digit_backtest(dataset: ProductDataset) -> dict[str, object]:
             "exact_hits": model_exact,
             "exact_hit_rate": _round(model_exact / samples),
             "average_best_position_matches": _round(fmean(model_best)),
+        },
+        "recent_model": {
+            "strategy": "recent_frequency",
+            "exact_hits": recent_exact,
+            "exact_hit_rate": _round(recent_exact / samples),
+            "average_best_position_matches": _round(fmean(recent_best)),
         },
         "audit_model": {
             "strategy": "audit_signal",
@@ -831,6 +945,16 @@ def _digit_backtest(dataset: ProductDataset) -> dict[str, object]:
             "approximate_p_value": _round(p_value, 8),
             **difference_interval,
             "beats_baseline_unadjusted": comparison_wins,
+            "beats_baseline": False,
+        },
+        "recent_comparison": {
+            "mean_position_match_difference": _round(
+                fmean(recent_differences)
+            ),
+            "paired_z_score": _round(recent_z_score),
+            "approximate_p_value": _round(recent_p_value, 8),
+            **recent_difference_interval,
+            "beats_baseline_unadjusted": recent_comparison_wins,
             "beats_baseline": False,
         },
         "audit_comparison": {
@@ -1539,3 +1663,33 @@ def _seed_int(seed: str) -> int:
 
 def _round(value: float, digits: int = 6) -> float:
     return round(float(value), digits)
+
+
+def _event_hash(event: dict[str, Any]) -> str:
+    payload = {
+        key: value
+        for key, value in event.items()
+        if key != "event_hash"
+    }
+    canonical = json.dumps(
+        payload,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    )
+    return hashlib.sha256(canonical.encode()).hexdigest()
+
+
+def _ledger_integrity_payload(
+    events: list[dict[str, Any]],
+    status: str,
+) -> dict[str, object]:
+    root = events[-1].get("event_hash") if events else None
+    return {
+        "chain_version": LEDGER_CHAIN_VERSION,
+        "algorithm": "sha256",
+        "status": status,
+        "event_count": len(events),
+        "root_hash": root,
+    }

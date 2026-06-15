@@ -100,17 +100,20 @@ async function renderProjectVerdict(products, backtestSummary) {
     const backtest = report.backtest;
     return (
       backtest.comparison?.beats_baseline
+      || backtest.recent_comparison?.beats_baseline
       || backtest.audit_comparison?.beats_baseline
     );
   }).length;
   const adjustedComparisons = reports.reduce((count, report) => (
     count
     + Number(Boolean(report.backtest.comparison?.beats_baseline))
+    + Number(Boolean(report.backtest.recent_comparison?.beats_baseline))
     + Number(Boolean(report.backtest.audit_comparison?.beats_baseline))
   ), 0);
   const unadjustedComparisons = reports.reduce((count, report) => (
     count
     + Number(Boolean(report.backtest.comparison?.beats_baseline_unadjusted))
+    + Number(Boolean(report.backtest.recent_comparison?.beats_baseline_unadjusted))
     + Number(Boolean(report.backtest.audit_comparison?.beats_baseline_unadjusted))
   ), 0);
 
@@ -131,7 +134,7 @@ async function renderProjectVerdict(products, backtestSummary) {
   text("project-verdict-summary", conclusion);
   text(
     "backtest-correction-summary",
-    `${adjustedComparisons} tín hiệu qua hiệu chỉnh; ${unadjustedComparisons} tín hiệu thô có p < 0,05 trên ${backtestSummary?.comparison_count ?? reports.length * 2} phép so sánh.`,
+    `${adjustedComparisons} tín hiệu qua hiệu chỉnh; ${unadjustedComparisons} tín hiệu thô có p < 0,05 trên ${backtestSummary?.comparison_count ?? reports.length * 3} phép so sánh.`,
   );
   renderBacktestOverview(reports);
   text(
@@ -148,6 +151,12 @@ function renderBacktestOverview(reports) {
     const kind = report.product.kind;
     const comparisons = [
       { label: "Kết hợp ba dấu hiệu", comparison: backtest.comparison },
+      backtest.recent_comparison
+        ? {
+            label: "Tần suất cửa sổ gần",
+            comparison: backtest.recent_comparison,
+          }
+        : null,
       backtest.audit_comparison
         ? {
             label: "Khai thác kiểm định công bằng",
@@ -191,17 +200,20 @@ function renderBacktestOverview(reports) {
   const winningStrategies = reports.reduce((count, report) => (
     count
     + Number(Boolean(report.backtest.comparison?.beats_baseline))
+    + Number(Boolean(report.backtest.recent_comparison?.beats_baseline))
     + Number(Boolean(report.backtest.audit_comparison?.beats_baseline))
   ), 0);
   const rawSignals = reports.reduce((count, report) => (
     count
     + Number(Boolean(report.backtest.comparison?.beats_baseline_unadjusted))
+    + Number(Boolean(report.backtest.recent_comparison?.beats_baseline_unadjusted))
     + Number(Boolean(report.backtest.audit_comparison?.beats_baseline_unadjusted))
   ), 0);
   text(
     "backtest-overview-summary",
     `${reports.filter((report) => (
       report.backtest.comparison?.beats_baseline
+      || report.backtest.recent_comparison?.beats_baseline
       || report.backtest.audit_comparison?.beats_baseline
     )).length}/${reports.length} sản phẩm; ${winningStrategies} tín hiệu qua hiệu chỉnh; ${rawSignals} tín hiệu thô`,
   );
@@ -310,13 +322,15 @@ function renderProductReport(report) {
 }
 
 function renderMetrics(summary, analysis, product) {
-  const coverage = summary.prizes.draws_with_prizes / summary.confirmed_draws;
-  const officialCount = summary.data_sources.official_vietlott || 0;
-  const officialRate = officialCount / summary.confirmed_draws;
-  const sourceNames = Object.entries(summary.data_sources)
+  const quality = summary.data_quality || {};
+  const resultCoverage = Number(quality.result_coverage_rate || 0);
+  const prizeCoverage = Number(quality.prize_coverage_rate || 0);
+  const officialRate = Number(quality.official_source_rate || 0);
+  const crossCheckedRate = Number(quality.cross_checked_rate || 0);
+  const sourceNames = Object.entries(quality.source_origins || {})
     .sort((left, right) => right[1] - left[1])
     .slice(0, 2)
-    .map(([name]) => sourceLabel(name))
+    .map(([name]) => sourceOriginLabel(name))
     .join(", ");
   const cards = [
     {
@@ -336,19 +350,29 @@ function renderMetrics(summary, analysis, product) {
           : `${analysis.sequence_length} chữ số có thứ tự`,
     },
     {
-      label: "Ngày có dữ liệu",
-      value: numberFormatter.format(summary.calendar_days_with_draws),
-      note: `${formatDecimal(summary.average_draws_per_active_day)} kỳ mỗi ngày hoạt động`,
-    },
-    {
-      label: "Dòng nguồn chính thức",
-      value: formatPercent(officialRate),
-      note: sourceNames || "Chưa có nhãn nguồn",
+      label: "Độ phủ kết quả",
+      value: formatPercent(resultCoverage),
+      note: `${numberFormatter.format(quality.result_coverage_rows || 0)} dòng có kết quả`,
     },
     {
       label: "Độ phủ giải thưởng",
-      value: formatPercent(coverage),
-      note: `${numberFormatter.format(summary.prizes.draws_with_prizes)} kỳ có dòng giải`,
+      value: formatPercent(prizeCoverage),
+      note: `${numberFormatter.format(quality.prize_coverage_draws || 0)} kỳ có bảng giải chi tiết`,
+    },
+    {
+      label: "Nguồn chính thức rõ provenance",
+      value: formatPercent(officialRate),
+      note: sourceNames || "Chưa phân loại được nguồn",
+    },
+    {
+      label: "Đã đối chiếu nhiều nguồn",
+      value: formatPercent(crossCheckedRate),
+      note: `${numberFormatter.format(quality.cross_checked_rows || 0)} dòng có bằng chứng đối chiếu`,
+    },
+    {
+      label: "Ngày có dữ liệu",
+      value: numberFormatter.format(summary.calendar_days_with_draws),
+      note: `${formatDecimal(summary.average_draws_per_active_day)} kỳ mỗi ngày hoạt động`,
     },
   ];
   document.getElementById("product-metrics").innerHTML = cards
@@ -361,6 +385,16 @@ function renderMetrics(summary, analysis, product) {
         </article>`,
     )
     .join("");
+}
+
+function sourceOriginLabel(value) {
+  const labels = {
+    official: "Chính thức",
+    secondary: "Nguồn phụ",
+    community: "Gương cộng đồng",
+    unknown: "Chưa truy ngược",
+  };
+  return labels[value] || value.replaceAll("_", " ");
 }
 
 function sourceLabel(value) {
@@ -441,15 +475,19 @@ function renderAuditOverview(report) {
   if (!report) return;
   const summary = report.summary || report;
   const counts = summary.status_counts || {};
+  const singleCondition =
+    Number(counts.statistically_notable || 0)
+    + Number(counts.practically_large || 0);
   text("audit-test-count", numberFormatter.format(summary.test_count || 0));
-  text("audit-review-count", numberFormatter.format(counts.review || 0));
-  text("audit-watch-count", numberFormatter.format(counts.watch || 0));
+  text("audit-review-count", numberFormatter.format(counts.both || 0));
+  text("audit-watch-count", numberFormatter.format(singleCondition));
   text("audit-global-conclusion", summary.conclusion || "Chưa có kết luận kiểm định.");
   text(
     "audit-log-summary",
     `${numberFormatter.format(summary.test_count || 0)} kiểm định, `
     + `${numberFormatter.format(summary.product_count || 0)} sản phẩm, `
-    + `${numberFormatter.format(counts.watch || 0)} theo dõi`,
+    + `${numberFormatter.format(counts.both || 0)} đạt cả hai điều kiện, `
+    + `${numberFormatter.format(singleCondition)} chỉ đạt một điều kiện`,
   );
   renderAuditVisualLog(report);
 }
@@ -473,8 +511,9 @@ function renderAuditVisualLog(report) {
       </div>
       <div class="audit-log-statuses">
         ${renderAuditStatusPill("pass", statusCounts.pass || 0)}
-        ${renderAuditStatusPill("watch", statusCounts.watch || 0)}
-        ${renderAuditStatusPill("review", statusCounts.review || 0)}
+        ${renderAuditStatusPill("statistically_notable", statusCounts.statistically_notable || 0)}
+        ${renderAuditStatusPill("practically_large", statusCounts.practically_large || 0)}
+        ${renderAuditStatusPill("both", statusCounts.both || 0)}
         ${renderAuditStatusPill("skipped", statusCounts.skipped || 0)}
       </div>
     </div>
@@ -488,9 +527,35 @@ function renderAuditVisualLog(report) {
           ${escapeHtml(strongest.interpretation)}
         </p>
       </article>` : ""}
+    ${renderAuditThresholdSensitivity(report)}
     <div class="audit-log-products">
       ${productsHtml}
     </div>`;
+}
+
+function renderAuditThresholdSensitivity(report) {
+  const sensitivity = report.threshold_sensitivity;
+  const globalRows = sensitivity?.global || [];
+  if (!globalRows.length) return "";
+  const thresholds = report.effect_thresholds || [];
+  const rows = globalRows.map((row) => `
+    <div>
+      <dt>${formatDecimal(row.threshold_multiplier, 1)}x</dt>
+      <dd>
+        ${numberFormatter.format(row.practically_large_count)}
+        <small>${numberFormatter.format(row.both_count)} đạt cả hai</small>
+      </dd>
+    </div>`).join("");
+  return `
+    <article class="audit-signal-card pass threshold-sensitivity-card">
+      <span>Độ nhạy ngưỡng hiệu ứng</span>
+      <strong>${numberFormatter.format(thresholds.length)} ngưỡng đã khóa, rà soát theo 4 mức</strong>
+      <p>
+        Các mức dưới đây đếm lại số phép kiểm đạt độ lớn thực dụng nếu nhân ngưỡng
+        với hệ số tương ứng. Mức 1,0x là luật đang dùng trong báo cáo.
+      </p>
+      <dl class="threshold-sensitivity-grid">${rows}</dl>
+    </article>`;
 }
 
 function renderAuditProductCard(product) {
@@ -509,8 +574,9 @@ function renderAuditProductCard(product) {
       </div>
       <div class="audit-status-pills">
         ${renderAuditStatusPill("pass", counts.pass || 0)}
-        ${renderAuditStatusPill("watch", counts.watch || 0)}
-        ${renderAuditStatusPill("review", counts.review || 0)}
+        ${renderAuditStatusPill("statistically_notable", counts.statistically_notable || 0)}
+        ${renderAuditStatusPill("practically_large", counts.practically_large || 0)}
+        ${renderAuditStatusPill("both", counts.both || 0)}
         ${renderAuditStatusPill("skipped", counts.skipped || 0)}
       </div>
       ${signal ? `
@@ -533,22 +599,30 @@ function renderAuditStatusPill(status, value) {
 
 function auditProductStatus(product) {
   const counts = product.status_counts || {};
-  if (counts.review) return "review";
-  if (counts.watch) return "watch";
+  if (counts.both) return "both";
+  if (counts.statistically_notable) return "statistically_notable";
+  if (counts.practically_large) return "practically_large";
   if (counts.skipped) return "skipped";
   return "pass";
 }
 
 function auditProductRank(product) {
-  const order = { review: 0, watch: 1, skipped: 2, pass: 3 };
+  const order = {
+    both: 0,
+    statistically_notable: 1,
+    practically_large: 2,
+    skipped: 3,
+    pass: 4,
+  };
   return order[auditProductStatus(product)] ?? 4;
 }
 
 function auditStatusLabel(status) {
   const labels = {
     pass: "Bình thường",
-    watch: "Theo dõi",
-    review: "Đọc kỹ",
+    statistically_notable: "Nổi bật thống kê",
+    practically_large: "Độ lớn thực dụng",
+    both: "Đạt cả hai",
     skipped: "Tạm hoãn",
   };
   return labels[status] || status;
@@ -557,21 +631,25 @@ function auditStatusLabel(status) {
 function renderFairnessAudit(audit) {
   if (!audit) return;
   const counts = audit.status_counts || {};
-  const review = counts.review || 0;
-  const watch = counts.watch || 0;
+  const both = counts.both || 0;
+  const statisticallyNotable = counts.statistically_notable || 0;
+  const practicallyLarge = counts.practically_large || 0;
   const pass = counts.pass || 0;
-  const verdict = review
-    ? "Cần đọc kỹ"
-    : watch
-      ? "Cần theo dõi"
-      : "Chưa thấy tín hiệu mạnh";
+  const verdict = both
+    ? "Đạt cả hai điều kiện"
+    : statisticallyNotable
+      ? "Nổi bật thống kê, hiệu ứng nhỏ"
+      : practicallyLarge
+        ? "Độ lớn đáng chú ý, chưa đủ thống kê"
+        : "Chưa thấy tín hiệu mạnh";
   text("audit-product-verdict", verdict);
   text("audit-product-conclusion", audit.conclusion);
   const metrics = [
     ["Kiểm định đã chạy", audit.tests.length],
     ["Đạt ngưỡng bình thường", pass],
-    ["Cần theo dõi", watch],
-    ["Cần đọc kỹ", review],
+    ["Nổi bật thống kê", statisticallyNotable],
+    ["Độ lớn thực dụng", practicallyLarge],
+    ["Đạt cả hai", both],
     ["Chạy lại sau", `${numberFormatter.format(audit.audit_interval_draws)} kỳ`],
   ];
   document.getElementById("audit-product-metrics").innerHTML = metrics
@@ -585,9 +663,15 @@ function renderFairnessAudit(audit) {
     .join("");
 
   const ranked = [...audit.tests].sort((left, right) => {
-    const order = { review: 0, watch: 1, skipped: 2, pass: 3 };
-    const leftRank = order[left.status] ?? 3;
-    const rightRank = order[right.status] ?? 3;
+    const order = {
+      both: 0,
+      statistically_notable: 1,
+      practically_large: 2,
+      skipped: 3,
+      pass: 4,
+    };
+    const leftRank = order[left.status] ?? 4;
+    const rightRank = order[right.status] ?? 4;
     if (leftRank !== rightRank) return leftRank - rightRank;
     return (left.q_value_global_bh || left.q_value_bh || 1)
       - (right.q_value_global_bh || right.q_value_bh || 1);
@@ -608,7 +692,8 @@ function renderFairnessAudit(audit) {
         </aside>
         ${highlightedTests.map(renderAuditTestRow).join("")}
       </div>
-    </details>`;
+    </details>
+    ${renderAuditPositionResiduals(audit)}`;
 
   document.getElementById("audit-method-catalog").innerHTML = `
     <div class="audit-family-list">
@@ -622,6 +707,50 @@ function renderFairnessAudit(audit) {
       Nhóm thuật toán nặng như HMM, MCMC, TestU01 đầy đủ và deep learning chưa chạy tự động
       trong phiên bản này vì chi phí cao và dễ khó giải thích.
     </p>`;
+}
+
+function renderAuditPositionResiduals(audit) {
+  const test = audit.tests.find((item) => item.id === "digit_position_chi_square");
+  const residuals = test?.parameters?.position_residuals || [];
+  if (!residuals.length) return "";
+  const grouped = new Map();
+  for (const item of residuals) {
+    if (!grouped.has(item.position)) grouped.set(item.position, []);
+    grouped.get(item.position).push(item);
+  }
+  const maxAbs = Math.max(
+    2,
+    ...residuals.map((item) => Math.abs(item.standardized_residual)),
+  );
+  return `
+    <section class="position-residual-panel" aria-labelledby="position-residual-title">
+      <div class="position-residual-heading">
+        <div>
+          <span>Phân rã kiểm định theo vị trí</span>
+          <strong id="position-residual-title">Ô nào đóng góp nhiều vào độ lệch tổng?</strong>
+        </div>
+        <p>
+          Residual dương nghĩa là xuất hiện nhiều hơn kỳ vọng, residual âm nghĩa là
+          ít hơn. Mốc ±2 chỉ giúp định hướng đọc, không phải một kiểm định mới cho từng ô.
+        </p>
+      </div>
+      <div class="position-residual-scroll">
+        <div class="position-residual-grid">
+          ${[...grouped.entries()].map(([position, rows]) => `
+            <div class="position-residual-row">
+              <span>Vị trí ${position}</span>
+              ${rows.map((item) => `
+                <div
+                  style="background:${residualColor(item.standardized_residual / maxAbs)}"
+                  title="Vị trí ${item.position}, số ${item.digit}: quan sát ${numberFormatter.format(item.observed)}, kỳ vọng ${formatDecimal(item.expected, 1)}, residual ${formatSigned(item.standardized_residual)}">
+                  <b>${item.digit}</b>
+                  <strong>${formatSigned(item.standardized_residual)}</strong>
+                </div>`).join("")}
+            </div>`).join("")}
+        </div>
+      </div>
+      <small>${escapeHtml(test.parameters.residual_note || "")}</small>
+    </section>`;
 }
 
 function renderAuditTestRow(test) {
@@ -1107,6 +1236,13 @@ function renderBacktest(backtest, kind) {
       model: backtest.model,
       comparison: backtest.comparison,
     },
+    backtest.recent_model && backtest.recent_comparison
+      ? {
+          label: "Tần suất cửa sổ gần",
+          model: backtest.recent_model,
+          comparison: backtest.recent_comparison,
+        }
+      : null,
     backtest.audit_model && backtest.audit_comparison
       ? {
           label: "Khai thác kiểm định công bằng",
@@ -1127,10 +1263,12 @@ function renderBacktest(backtest, kind) {
   const scoreDescription = kind === "number_set"
     ? `
       <li><strong>Kết hợp ba dấu hiệu</strong><span>0,40 × z ngắn hạn + 0,30 × z gần - 0,15 × z toàn lịch sử + 0,15 × độ vắng đã chuẩn hóa.</span></li>
+      <li><strong>Tần suất cửa sổ gần</strong><span>0,60 × z ngắn hạn + 0,40 × z của cửa sổ gần, không dùng dữ liệu toàn lịch sử hoặc độ vắng.</span></li>
       <li><strong>Tín hiệu kiểm định</strong><span>0,45 × độ nóng dài hạn + 0,25 × gần + 0,15 × ngắn + 0,15 × áp lực đồng xuất hiện, sau đó chọn tham lam có xét cặp số.</span></li>
       <li><strong>Điểm mỗi kỳ</strong><span>Số lượng số chính dự đoán trùng với kết quả thật. Số đặc biệt chưa được đưa vào điểm backtest này.</span></li>`
     : `
       <li><strong>Kết hợp ba dấu hiệu</strong><span>Chấm riêng từng vị trí bằng 0,40 × z ngắn hạn + 0,30 × z gần - 0,20 × z toàn lịch sử.</span></li>
+      <li><strong>Tần suất cửa sổ gần</strong><span>Chấm riêng từng vị trí bằng 0,60 × z ngắn hạn + 0,40 × z của cửa sổ gần.</span></li>
       <li><strong>Tín hiệu kiểm định</strong><span>Chấm riêng từng vị trí bằng 0,45 × độ nóng dài hạn + 0,35 × gần + 0,20 × ngắn.</span></li>
       <li><strong>Điểm mỗi kỳ</strong><span>Số vị trí khớp nhiều nhất giữa chuỗi dự đoán và các kết quả công bố trong kỳ.</span></li>`;
   container.innerHTML = `
@@ -1180,12 +1318,13 @@ function renderBacktest(backtest, kind) {
           ${scoreDescription}
           <li><strong>Baseline đồng đều chính xác</strong><span>Với tập số, kỳ vọng và phân bố số trùng được tính bằng phân bố siêu bội. Với chuỗi chữ số, chương trình đếm chính xác toàn bộ không gian chuỗi hợp lệ của từng kỳ. Kết quả không phụ thuộc seed.</span></li>
           <li><strong>So sánh theo từng kỳ</strong><span>Với mỗi kỳ tính d = điểm chiến lược - điểm kỳ vọng đồng đều. Báo cáo lấy trung bình d và tính z = trung bình(d) / (độ lệch chuẩn(d) / √n), rồi lấy p hai phía từ phân bố chuẩn.</span></li>
-          <li><strong>Hiệu chỉnh toàn hệ thống</strong><span>Tất cả p-value của hai chiến lược trên mọi sản phẩm được hiệu chỉnh Benjamini-Hochberg. Chỉ ghi "vượt baseline" khi trung bình d &gt; 0 và q toàn hệ thống &lt; 0,05.</span></li>
+          <li><strong>Hiệu chỉnh toàn hệ thống</strong><span>Tất cả p-value của ba chiến lược trên mọi sản phẩm được hiệu chỉnh Benjamini-Hochberg. Chỉ ghi "vượt baseline" khi trung bình d &gt; 0 và q toàn hệ thống &lt; 0,05.</span></li>
         </ol>
         <p>
           Mã triển khai nằm trong
           <a href="https://github.com/NhanAZ/vietlott-data-research/blob/main/src/vietlott_analytics/predictions.py">src/vietlott_analytics/predictions.py</a>.
-          Báo cáo hiện backtest hai chiến lược ứng viên là “Kết hợp ba dấu hiệu” và “Tín hiệu kiểm định”; “Tần suất cửa sổ gần” hiện có trong sổ dự đoán nhưng chưa nằm trong phép so sánh backtest này.
+          Báo cáo backtest đủ ba chiến lược đang được ghi vào sổ dự đoán là “Kết hợp ba dấu hiệu”,
+          “Tần suất cửa sổ gần” và “Tín hiệu kiểm định”.
         </p>
       </div>
     </details>`;
@@ -1239,6 +1378,7 @@ function renderRecentDraws(draws, kind) {
 
 function renderPredictionShell(predictions, products) {
   const outcome = predictions.outcome_summary || {};
+  const integrity = predictions.ledger_integrity || {};
   text("pending-predictions", numberFormatter.format(predictions.pending_count));
   text("exact-predictions", numberFormatter.format(outcome.exact || 0));
   text("near-predictions", numberFormatter.format(outcome.near || 0));
@@ -1248,6 +1388,12 @@ function renderPredictionShell(predictions, products) {
     `${outcome.near_rule || ""} ${numberFormatter.format(predictions.evaluation_count)} lượt dự đoán hiện thuộc ${numberFormatter.format(outcome.evaluated_draws || 0)} kỳ quay thực tế.`,
   );
   text("prediction-current-conclusion", predictionOutcomeConclusion());
+  text(
+    "prediction-ledger-integrity",
+    integrity.status === "valid" && integrity.root_hash
+      ? `Chuỗi hash hợp lệ gồm ${numberFormatter.format(integrity.event_count)} sự kiện. Hash gốc ${integrity.root_hash}.`
+      : "Sổ dự đoán chưa có chuỗi hash hợp lệ để công bố.",
+  );
   const select = document.getElementById("prediction-product");
   const available = products.filter((product) => predictions.latest[product.slug]);
   select.innerHTML = available

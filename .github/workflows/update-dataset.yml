@@ -46,6 +46,23 @@ jobs:
       - name: Cài chương trình
         run: python -m pip install -e .
 
+      - name: Lưu báo cáo trước cập nhật
+        shell: bash
+        run: |
+          before_dir="$RUNNER_TEMP/vietlott-reports/before"
+          mkdir -p "$before_dir"
+          for file in \
+            datasets/metadata/dataset-summary.json \
+            datasets/metadata/quality-report.json \
+            datasets/metadata/snapshot-manifest.json \
+            site/data/audit-summary.json \
+            site/data/manifest.json \
+            site/data/predictions.json; do
+            if test -f "$file"; then
+              cp "$file" "$before_dir/$(basename "$file")"
+            fi
+          done
+
       - name: Khôi phục kho làm việc
         run: vietlott-repository-data hydrate --source-dir datasets --destination-dir data
 
@@ -81,11 +98,27 @@ jobs:
           vietlott-repository-data validate \
             --source-dir datasets \
             > "$report_dir/validation-report.json"
+          vietlott-repository-data audit \
+            --source-dir datasets \
+            > "$report_dir/quality-audit.json"
           vietlott-research-report \
             --datasets-dir datasets \
             --site-dir site \
             --prediction-ledger predictions/ledger.jsonl \
             > "$report_dir/research-report.json"
+          after_dir="$report_dir/after"
+          mkdir -p "$after_dir"
+          cp datasets/metadata/dataset-summary.json "$after_dir/"
+          cp datasets/metadata/quality-report.json "$after_dir/"
+          cp datasets/metadata/snapshot-manifest.json "$after_dir/"
+          cp site/data/audit-summary.json "$after_dir/"
+          cp site/data/manifest.json "$after_dir/"
+          cp site/data/predictions.json "$after_dir/"
+          python scripts/check_quality_regressions.py \
+            --before "$report_dir/before/quality-report.json" \
+            --after datasets/metadata/quality-report.json \
+            --output "$report_dir/quality-regressions.json" \
+            >> "$GITHUB_STEP_SUMMARY"
 
       - name: Ghi tóm tắt lần cập nhật
         if: always()

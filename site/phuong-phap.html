@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,500;1,400;1,500&amp;display=swap">
   <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/3.0.0/uicons-regular-rounded/css/uicons-regular-rounded.css">
-  <link rel="stylesheet" href="assets/styles.css?v=20260615-9">
+  <link rel="stylesheet" href="assets/styles.css?v=20260615-12">
 </head>
 <body>
   <a class="skip-link" href="#main">Bỏ qua điều hướng</a>
@@ -269,6 +269,10 @@
             <strong>0,40 × z_ngắn + 0,30 × z_gần - 0,15 × z_dài + 0,15 × (độ_vắng - 1)</strong>
           </div>
           <div class="formula-card">
+            <span>Tần suất cửa sổ gần</span>
+            <strong>0,60 × z_ngắn + 0,40 × z_gần</strong>
+          </div>
+          <div class="formula-card">
             <span>Tín hiệu kiểm định công bằng</span>
             <strong>0,45 × nóng_dài + 0,25 × gần + 0,15 × ngắn + 0,15 × áp_lực_cặp</strong>
           </div>
@@ -283,6 +287,8 @@
           <p>
             Mỗi vị trí được chấm riêng. Chiến lược cân bằng dùng
             <code>0,40 × z_ngắn + 0,30 × z_gần - 0,20 × z_dài</code>.
+            Chiến lược tần suất gần dùng
+            <code>0,60 × z_ngắn + 0,40 × z_gần</code>.
             Chiến lược kiểm định dùng
             <code>0,45 × nóng_dài + 0,35 × gần + 0,20 × ngắn</code>.
             Chữ số có điểm cao nhất ở từng vị trí tạo thành chuỗi dự đoán.
@@ -306,13 +312,12 @@
             <strong>z = trung_bình(d) / (độ_lệch_chuẩn(d) / √n)</strong>
           </div>
           <p>
-            p-value hai phía được xấp xỉ bằng phân bố chuẩn. Toàn bộ p-value của hai
+            p-value hai phía được xấp xỉ bằng phân bố chuẩn. Toàn bộ p-value của ba
             chiến lược trên mọi sản phẩm sau đó được hiệu chỉnh Benjamini-Hochberg.
             Một chiến lược chỉ được đánh dấu vượt baseline khi trung bình chênh lệch
-            dương và <code>q toàn hệ thống &lt; 0,05</code>. Báo cáo hiện so hai chiến lược ứng viên là
-            “Kết hợp ba dấu hiệu” và “Tín hiệu kiểm định công bằng”. Chiến lược
-            “Tần suất cửa sổ gần” có trong sổ dự đoán nhưng chưa được tính trong
-            báo cáo backtest.
+            dương và <code>q toàn hệ thống &lt; 0,05</code>. Ba chiến lược ứng viên là
+            "Kết hợp ba dấu hiệu", "Tần suất cửa sổ gần" và
+            "Tín hiệu kiểm định công bằng".
           </p>
           <p>
             Mỗi chênh lệch còn đi kèm khoảng ước lượng 95% theo xấp xỉ chuẩn
@@ -364,9 +369,12 @@
           </div>
           <p>
             Mỗi phép kiểm định xuất ra thống kê, p-value, q-value sau hiệu chỉnh Benjamini-Hochberg,
-            kích thước hiệu ứng và diễn giải ngắn. Website dùng ba nhãn: <code>pass</code> khi chưa
-            thấy tín hiệu mạnh, <code>watch</code> khi cần theo dõi, và <code>review</code> khi tín
-            hiệu đủ đáng đọc kỹ sau hiệu chỉnh.
+            kích thước hiệu ứng và diễn giải ngắn. Website không còn gộp mọi lý do vào nhãn
+            <code>watch</code>. <code>statistically_notable</code> nghĩa là q sau hiệu chỉnh nhỏ
+            hơn 0,05 nhưng hiệu ứng chưa đủ lớn. <code>practically_large</code> nghĩa là hiệu ứng
+            đạt ngưỡng đã khóa nhưng q chưa nhỏ. <code>both</code> nghĩa là đạt cả hai điều kiện.
+            <code>pass</code> nghĩa là chưa đạt điều kiện nào và <code>skipped</code> là phép kiểm
+            được hoãn có ghi lý do.
           </p>
           <p class="callout warning">
             Đây không phải kiểm toán vận hành độc lập theo nghĩa pháp lý. Dữ liệu công khai không có
