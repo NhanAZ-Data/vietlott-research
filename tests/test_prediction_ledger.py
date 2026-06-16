@@ -68,6 +68,11 @@ def test_prediction_ledger_is_idempotent_and_appends_evaluations(tmp_path) -> No
     assert report["outcome_summary"]["exact"] == 0
     assert report["product_outcomes"]["mega645"]["evaluated_predictions"] == 4
     assert report["history_limit_per_product"] == 100
+    assert len(report["archived_evaluations"]) == report["evaluation_count"] == 4
+    assert report["archived_evaluations"][0]["actual_draw_id"] == "00041"
+    assert len(report["pending_predictions"]) == report["pending_count"] == 4
+    assert report["pending_predictions"][0]["prediction"]
+    assert report["pending_predictions"][0]["prediction_generated_at"]
     assert report["recent_evaluations"][0]["prediction"]
     assert report["recent_evaluations"][0]["prediction_generated_at"]
     assert report["recent_evaluations"][0]["outcome"]["status"] in {
@@ -275,6 +280,10 @@ def test_prediction_report_prefers_newer_model_for_same_cutoff(tmp_path) -> None
     [latest] = report["latest"]["mega645"]
     assert latest["prediction_id"] == "newer-model"
     assert latest["prediction"]["numbers"] == [7, 8, 9, 10, 11, 12]
+    assert {row["prediction_id"] for row in report["pending_predictions"]} == {
+        "newer-model",
+        "older-model",
+    }
 
 
 def test_prediction_report_uses_strict_exact_and_near_rules(tmp_path) -> None:
@@ -363,6 +372,7 @@ def test_prediction_report_uses_strict_exact_and_near_rules(tmp_path) -> None:
         evaluation["prediction_id"]: evaluation["outcome"]["status"]
         for evaluation in report["recent_evaluations"]
     }
+    assert len(report["archived_evaluations"]) == 3
     assert statuses == {
         "prediction-0": "exact",
         "prediction-1": "near",

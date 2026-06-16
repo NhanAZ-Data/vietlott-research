@@ -19,12 +19,12 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert 'id="phan-tich"' in index
     assert 'id="du-doan"' in index
     assert 'id="kiem-dinh"' in index
-    assert "assets/app.js?v=20260615-13" in index
+    assert "assets/app.js?v=20260616-1" in index
     assert "archive-summary-heading" in index
     assert "Sổ dự đoán toàn hệ thống" in index
     assert "assets/docs.js?v=20260615-1" in data_page
     for page in (index, method_page, data_page):
-        assert "assets/styles.css?v=20260615-14" in page
+        assert "assets/styles.css?v=20260616-2" in page
         assert "assets/favicon.svg?v=20260614-9" in page
         assert "fonts.googleapis.com/css2?family=Noto+Serif" in page
         assert "cdn-uicons.flaticon.com/3.0.0" in page
@@ -69,10 +69,15 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert "audit-test-list-inner" in styles
     assert 'text("ribbon-product-count"' in app_script
     assert 'text("exact-predictions"' in app_script
+    assert 'text("archive-evaluated-draws"' in app_script
     assert "renderPredictionResults" in app_script
+    assert "renderPredictionArchiveDetail" in app_script
+    assert "renderPendingPrediction" in app_script
     assert "audit_signal" in app_script
     assert "Khai thác kiểm định công bằng" in app_script
     assert "prediction-history-list" in index
+    assert "prediction-archive-detail-list" in index
+    assert 'data-archive-filter="partial"' in index
     assert "Dự đoán gốc so với kết quả thật" in index
     assert "prediction-ledger-integrity" in index
     assert "Chuỗi hash hợp lệ" in app_script
@@ -177,6 +182,14 @@ def test_generated_site_data_matches_manifest() -> None:
         "prizes": manifest["prize_rows"],
     }
     assert predictions["pending_count"] >= predictions["embedded_pending_count"]
+    assert len(predictions["pending_predictions"]) == predictions["pending_count"]
+    assert len(predictions["archived_evaluations"]) == predictions["evaluation_count"]
+    assert predictions["pending_predictions"][0]["prediction"]
+    assert predictions["archived_evaluations"][0]["outcome"]["status"] in {
+        "exact",
+        "near",
+        "wrong",
+    }
     assert sum(
         len(rows) for rows in predictions["latest"].values()
     ) == predictions["embedded_pending_count"]

@@ -2988,6 +2988,10 @@ a {
   border-left-color: #71827f;
 }
 
+.prediction-evaluation.status-pending {
+  border-left-color: #9cb0ad;
+}
+
 .prediction-evaluation > header,
 .prediction-evaluation > footer {
   display: flex;
@@ -3024,6 +3028,11 @@ a {
 .prediction-status.status-wrong {
   background: rgb(255 255 255 / 10%);
   color: rgb(255 255 255 / 65%);
+}
+
+.prediction-status.status-pending {
+  background: rgb(255 255 255 / 14%);
+  color: var(--paper);
 }
 
 .prediction-versus {
@@ -3097,6 +3106,16 @@ a {
   color: var(--forest);
 }
 
+.prediction-pending-result {
+  min-height: 44px;
+  padding: 12px 13px;
+  border: 1px dashed rgb(255 255 255 / 18%);
+  border-radius: 11px;
+  color: rgb(255 255 255 / 58%);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .prediction-evaluation > footer {
   flex-wrap: wrap;
   justify-content: flex-start;
@@ -3156,7 +3175,6 @@ a {
 
 .archive-summary {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
   gap: 1px;
   margin-top: 18px;
   overflow: hidden;
@@ -3164,24 +3182,59 @@ a {
   background: rgb(255 255 255 / 12%);
 }
 
-.archive-summary > * {
-  min-height: 105px;
-  padding: 19px;
-  background: #173635;
-}
-
 .archive-summary .archive-summary-heading {
   min-height: auto;
-  grid-column: 1 / -1;
   padding: 18px 20px;
   background: #123130;
 }
 
-.archive-summary-heading span {
+.archive-summary-groups {
+  display: grid;
+  gap: 1px;
+  background: rgb(255 255 255 / 12%);
+}
+
+.archive-metric-grid {
+  display: grid;
+  gap: 1px;
+  background: rgb(255 255 255 / 12%);
+}
+
+.archive-status-grid {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.archive-evaluated-grid {
+  grid-template-columns: repeat(6, 1fr);
+}
+
+.archive-metric {
+  min-width: 0;
+  min-height: 105px;
+  padding: 19px;
+  border: 0;
+  background: #173635;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.archive-metric:hover,
+.archive-metric:focus-visible {
+  background: #1c4240;
+  outline: 2px solid rgb(212 255 91 / 54%);
+  outline-offset: -2px;
+}
+
+.archive-summary-heading span,
+.archive-detail-heading span {
   color: var(--acid);
 }
 
-.archive-summary-heading strong {
+.archive-summary-heading strong,
+.archive-detail-heading strong {
+  display: block;
   margin-top: 4px;
   color: var(--paper);
   font-size: 20px;
@@ -3196,7 +3249,8 @@ a {
   line-height: 1.6;
 }
 
-.archive-summary span {
+.archive-metric span,
+.archive-detail-heading span {
   display: block;
   color: rgb(255 255 255 / 50%);
   font-size: 10px;
@@ -3204,19 +3258,55 @@ a {
   text-transform: uppercase;
 }
 
-.archive-summary strong {
+.archive-metric strong {
   display: block;
   margin-top: 5px;
   color: var(--acid);
   font-size: 26px;
 }
 
+.archive-detail-panel {
+  background: #123130;
+}
+
+.archive-detail-heading {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+}
+
+.archive-detail-close {
+  flex: 0 0 auto;
+  padding: 9px 12px;
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 8%);
+  color: var(--paper);
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.archive-detail-close:hover,
+.archive-detail-close:focus-visible {
+  border-color: rgb(212 255 91 / 62%);
+  outline: none;
+}
+
+.archive-detail-list {
+  max-height: min(650px, 72vh);
+  overflow: auto;
+  padding: 0 14px 14px;
+}
+
 .archive-summary a {
   display: flex;
   min-height: 62px;
-  grid-column: 1 / -1;
   align-items: center;
   justify-content: center;
+  padding: 19px;
+  background: #173635;
   color: var(--paper);
   font-weight: 800;
   text-align: center;
@@ -3426,12 +3516,13 @@ a {
     grid-template-columns: repeat(10, 1fr);
   }
 
-  .archive-summary {
+  .archive-status-grid,
+  .archive-evaluated-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .archive-summary a {
-    grid-column: 1 / -1;
+  .archive-metric {
+    min-height: 96px;
   }
 
   .prediction-product-metrics {
@@ -3714,16 +3805,15 @@ a {
     text-align: center;
   }
 
-  .prediction-evaluation > header {
-    align-items: flex-start;
-  }
-
-  .archive-summary {
+  .archive-status-grid,
+  .archive-evaluated-grid {
     grid-template-columns: 1fr;
   }
 
-  .archive-summary a {
-    grid-column: auto;
+  .archive-detail-heading,
+  .prediction-evaluation > header {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 

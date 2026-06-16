@@ -1467,6 +1467,15 @@ function renderPredictionShell(predictions, products) {
   text("exact-predictions", numberFormatter.format(outcome.exact || 0));
   text("near-predictions", numberFormatter.format(outcome.near || 0));
   text("wrong-predictions", numberFormatter.format(outcome.wrong || 0));
+  text("archive-evaluated-draws", numberFormatter.format(outcome.evaluated_draws || 0));
+  text(
+    "archive-evaluated-predictions",
+    numberFormatter.format(outcome.evaluated_predictions || predictions.evaluation_count || 0),
+  );
+  text("archive-exact-evaluated", numberFormatter.format(outcome.exact || 0));
+  text("archive-near-evaluated", numberFormatter.format(outcome.near || 0));
+  text("archive-wrong-evaluated", numberFormatter.format(outcome.wrong || 0));
+  text("archive-partial-matches", numberFormatter.format(outcome.partial_matches || 0));
   text(
     "prediction-near-rule",
     `${outcome.near_rule || ""} ${numberFormatter.format(predictions.evaluation_count)} lượt dự đoán hiện thuộc ${numberFormatter.format(outcome.evaluated_draws || 0)} kỳ quay thực tế.`,
@@ -1478,6 +1487,7 @@ function renderPredictionShell(predictions, products) {
       ? `Chuỗi hash hợp lệ gồm ${numberFormatter.format(integrity.event_count)} sự kiện. Hash gốc ${integrity.root_hash}.`
       : "Sổ dự đoán chưa có chuỗi hash hợp lệ để công bố.",
   );
+  setupPredictionArchive();
   const select = document.getElementById("prediction-product");
   const available = products.filter((product) => predictions.latest[product.slug]);
   select.innerHTML = available
@@ -1494,6 +1504,100 @@ function renderPredictionShell(predictions, products) {
       : available[0]?.slug;
   select.addEventListener("change", () => renderPredictionCards(select.value));
   renderPredictionCards(select.value);
+}
+
+function setupPredictionArchive() {
+  document.querySelectorAll("[data-archive-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      renderPredictionArchiveDetail(button.dataset.archiveFilter || "evaluated-predictions");
+    });
+  });
+  document.getElementById("prediction-archive-detail-close")?.addEventListener("click", () => {
+    const panel = document.getElementById("prediction-archive-detail");
+    if (panel) panel.hidden = true;
+  });
+}
+
+function renderPredictionArchiveDetail(filter) {
+  const panel = document.getElementById("prediction-archive-detail");
+  const title = document.getElementById("prediction-archive-detail-title");
+  const kicker = document.getElementById("prediction-archive-detail-kicker");
+  const list = document.getElementById("prediction-archive-detail-list");
+  if (!panel || !title || !kicker || !list) return;
+
+  const payload = predictionArchivePayload(filter);
+  kicker.textContent = payload.kicker;
+  title.textContent = payload.title;
+  list.innerHTML = payload.rows.length
+    ? payload.rows
+      .map((row) =>
+        row.outcome
+          ? renderPredictionEvaluation(row, { showProduct: true })
+          : renderPendingPrediction(row),
+      )
+      .join("")
+    : `<div class="prediction-empty">${escapeHtml(payload.empty)}</div>`;
+  panel.hidden = false;
+  panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function predictionArchivePayload(filter) {
+  const predictions = state.predictions || {};
+  const summary = predictions.outcome_summary || {};
+  const evaluations = predictions.archived_evaluations || predictions.recent_evaluations || [];
+  const pending = predictionPendingRows(predictions);
+  const base = {
+    "evaluated-draws": {
+      rows: evaluations,
+      title: `${numberFormatter.format(summary.evaluated_draws || 0)} kỳ đã đối chiếu · ${numberFormatter.format(evaluations.length)} lượt dự đoán`,
+      kicker: "Kỳ đã đối chiếu",
+      empty: "Chưa có kỳ nào đủ điều kiện đối chiếu.",
+    },
+    "evaluated-predictions": {
+      rows: evaluations,
+      title: `${numberFormatter.format(evaluations.length)} lượt dự đoán đã đối chiếu`,
+      kicker: "Lượt dự đoán",
+      empty: "Chưa có lượt dự đoán nào đã đối chiếu.",
+    },
+    exact: {
+      rows: evaluations.filter((row) => row.outcome?.status === "exact"),
+      title: `${numberFormatter.format(summary.exact || 0)} lượt đúng toàn bộ`,
+      kicker: "Đúng toàn bộ",
+      empty: "Chưa có lượt nào đúng toàn bộ.",
+    },
+    near: {
+      rows: evaluations.filter((row) => row.outcome?.status === "near"),
+      title: `${numberFormatter.format(summary.near || 0)} lượt gần đúng`,
+      kicker: "Gần đúng",
+      empty: "Chưa có lượt gần đúng.",
+    },
+    wrong: {
+      rows: evaluations.filter((row) => row.outcome?.status === "wrong"),
+      title: `${numberFormatter.format(summary.wrong || 0)} lượt sai`,
+      kicker: "Sai",
+      empty: "Chưa có lượt sai.",
+    },
+    partial: {
+      rows: evaluations.filter((row) => row.outcome?.has_partial_match),
+      title: `${numberFormatter.format(summary.partial_matches || 0)} lượt có trùng một phần`,
+      kicker: "Có trùng một phần",
+      empty: "Chưa có lượt nào trùng một phần.",
+    },
+    pending: {
+      rows: pending,
+      title: `${numberFormatter.format(predictions.pending_count || pending.length)} lượt đang chờ kết quả`,
+      kicker: "Đang chờ kết quả",
+      empty: "Không còn lượt dự đoán nào đang chờ kết quả.",
+    },
+  };
+  return base[filter] || base["evaluated-predictions"];
+}
+
+function predictionPendingRows(predictions) {
+  if (Array.isArray(predictions.pending_predictions)) {
+    return predictions.pending_predictions;
+  }
+  return Object.values(predictions.latest || {}).flat();
 }
 
 function renderPredictionCards(slug) {
@@ -1612,9 +1716,12 @@ function renderPredictionResults(slug) {
   );
 }
 
-function renderPredictionEvaluation(evaluation) {
+function renderPredictionEvaluation(evaluation, options = {}) {
   const copy = predictionStrategyCopy(evaluation.strategy);
   const status = evaluation.outcome.status;
+  const productPrefix = options.showProduct
+    ? `${escapeHtml(predictionProductName(evaluation.product))} · `
+    : "";
   const predicted = renderEvaluationValue(
     evaluation.prediction,
     evaluation.outcome,
@@ -1630,7 +1737,7 @@ function renderPredictionEvaluation(evaluation) {
       <header>
         <div>
           <span class="strategy-name">${escapeHtml(copy.title)}</span>
-          <small>Ghi lúc ${escapeHtml(formatDateTime(evaluation.prediction_generated_at))}</small>
+          <small>${productPrefix}Ghi lúc ${escapeHtml(formatDateTime(evaluation.prediction_generated_at))}</small>
         </div>
         <span class="prediction-status status-${escapeHtml(status)}">
           ${escapeHtml(evaluation.outcome.status_label)}
@@ -1653,6 +1760,54 @@ function renderPredictionEvaluation(evaluation) {
         <span>Mã lưu vết ${escapeHtml(evaluation.prediction_id)}</span>
       </footer>
     </article>`;
+}
+
+function renderPendingPrediction(prediction) {
+  const copy = predictionStrategyCopy(prediction.strategy);
+  const predicted = renderPredictionOnlyValue(prediction.prediction || {});
+  return `
+    <article class="prediction-evaluation status-pending">
+      <header>
+        <div>
+          <span class="strategy-name">${escapeHtml(copy.title)}</span>
+          <small>${escapeHtml(predictionProductName(prediction.product))} · Ghi lúc ${escapeHtml(formatDateTime(prediction.prediction_generated_at))}</small>
+        </div>
+        <span class="prediction-status status-pending">Đang chờ kết quả</span>
+      </header>
+      <div class="prediction-versus">
+        <div>
+          <span>Dự đoán gốc</span>
+          ${predicted}
+        </div>
+        <b>chờ</b>
+        <div>
+          <span>Kết quả sau kỳ #${escapeHtml(prediction.dataset_cutoff_draw_id)}</span>
+          <div class="prediction-pending-result">Chưa có kết quả xác nhận</div>
+        </div>
+      </div>
+      <footer>
+        <strong>Dữ liệu khóa ngày ${formatDate(prediction.dataset_cutoff_date)}</strong>
+        <span>Mã lưu vết ${escapeHtml(prediction.prediction_id)}</span>
+      </footer>
+    </article>`;
+}
+
+function renderPredictionOnlyValue(result) {
+  if (Array.isArray(result.numbers)) {
+    const numbers = result.numbers
+      .map((value) => `<span class="ball">${String(value).padStart(2, "0")}</span>`)
+      .join("");
+    const special = (result.special_numbers || [])
+      .map((value) => `<span class="ball special">${String(value).padStart(2, "0")}</span>`)
+      .join("");
+    return `<div class="evaluation-balls">${numbers}${special}</div>`;
+  }
+  return `
+    <div class="evaluation-sequence">
+      ${[...String(result.sequence || "")]
+        .map((digit) => `<span>${escapeHtml(digit)}</span>`)
+        .join("")}
+    </div>`;
 }
 
 function renderEvaluationValue(result, outcome, side) {
@@ -1686,6 +1841,10 @@ function renderEvaluationValue(result, outcome, side) {
         )
         .join("")}
     </div>`;
+}
+
+function predictionProductName(slug) {
+  return state.manifest?.products?.find((product) => product.slug === slug)?.name || slug;
 }
 
 function predictionOutcomeConclusion() {

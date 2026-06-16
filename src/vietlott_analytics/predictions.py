@@ -273,6 +273,10 @@ class PredictionLedger:
         pending_by_product = Counter(
             str(prediction["product"]) for prediction in pending
         )
+        pending_predictions = [
+            _pending_prediction_detail(prediction)
+            for prediction in sorted(pending, key=_prediction_order, reverse=True)
+        ]
         return {
             "schema_version": 2,
             "model_version": MODEL_VERSION,
@@ -288,6 +292,7 @@ class PredictionLedger:
             "pending_count": len(pending),
             "embedded_pending_count": embedded_latest_count,
             "pending_by_product": dict(sorted(pending_by_product.items())),
+            "pending_predictions": pending_predictions,
             "pending_embedding_note": (
                 "latest chỉ nhúng dự đoán mới nhất của từng chiến lược để website gọn. "
                 "pending_count đếm toàn bộ dự đoán chưa có kết quả trong ledger."
@@ -308,6 +313,11 @@ class PredictionLedger:
             },
             "product_outcomes": product_outcomes,
             "performance": performance_rows,
+            "archived_evaluations": sorted(
+                evaluation_details,
+                key=_evaluation_order,
+                reverse=True,
+            ),
             "history_limit_per_product": 100,
             "recent_evaluations": [
                 row
@@ -1448,6 +1458,33 @@ def _evaluation_detail(
             **comparison,
         },
     }
+
+
+def _pending_prediction_detail(prediction: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "prediction_id": prediction["prediction_id"],
+        "product": prediction["product"],
+        "strategy": prediction["strategy"],
+        "strategy_label": prediction.get("strategy_label", prediction["strategy"]),
+        "model_version": prediction["model_version"],
+        "prediction_generated_at": prediction["generated_at"],
+        "dataset_cutoff_draw_id": prediction["dataset_cutoff_draw_id"],
+        "dataset_cutoff_date": prediction["dataset_cutoff_date"],
+        "dataset_fingerprint": prediction["dataset_fingerprint"],
+        "prediction": prediction["prediction"],
+        "target": prediction.get("target", "first_confirmed_draw_after_cutoff"),
+    }
+
+
+def _evaluation_order(evaluation: dict[str, Any]) -> tuple[str, int | str, str, str]:
+    draw_id = str(evaluation["actual_draw_id"])
+    draw_key: int | str = int(draw_id) if draw_id.isdigit() else draw_id
+    return (
+        str(evaluation["actual_draw_date"]),
+        draw_key,
+        str(evaluation.get("prediction_generated_at", "")),
+        str(evaluation.get("prediction_id", "")),
+    )
 
 
 def _score_distribution(rows: list[dict[str, Any]]) -> list[dict[str, int]]:
