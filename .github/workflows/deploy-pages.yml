@@ -8,6 +8,13 @@ on:
     paths:
       - ".github/workflows/deploy-pages.yml"
       - "site/**"
+  workflow_run:
+    workflows:
+      - "Cập nhật các kỳ quay theo lịch"
+      - "Cập nhật Keno và Bingo18"
+      - "Cập nhật dữ liệu khí tượng"
+    types:
+      - completed
 
 permissions:
   contents: read
@@ -22,9 +29,12 @@ jobs:
   build:
     name: Đóng gói website
     runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     steps:
       - name: Lấy mã nguồn
         uses: actions/checkout@v6
+        with:
+          ref: main
 
       - name: Cài Python
         uses: actions/setup-python@v6
