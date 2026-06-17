@@ -519,14 +519,14 @@
       "sha256": "4b8dd31c8e153b01ba9dc84fd4b8053bef056dd45c9284258606bd92e8a48e9b"
     },
     "draws/lotto535/all.csv": {
-      "bytes": 274994,
+      "bytes": 275072,
       "data_rows": 708,
-      "sha256": "8e46aa36b3be12969acb66fdd9fa9f5f05621638d1749ff50a000f706be49f74"
+      "sha256": "f40107b6126cf74eb3b44ee9d622e86fd34ac9f4ed81b548a7c7e9464c5af6da"
     },
     "draws/max3d/all.csv": {
-      "bytes": 918378,
+      "bytes": 918452,
       "data_rows": 1094,
-      "sha256": "e480816e6ed0adee612878a69cb801cf97b3f3afa549ba2896d0ef1852b398d4"
+      "sha256": "f1b6ffeb57e8cea86370c4c8ba2fead6bc500c4e96a20bbbfe6a089bb891aa8b"
     },
     "draws/max3dpro/all.csv": {
       "bytes": 632909,
@@ -579,17 +579,17 @@
     "prizes/lotto535/all.csv": {
       "bytes": 1933815,
       "data_rows": 5656,
-      "sha256": "851ea1f7764f9608c7c37afdf9f7e2380d6636aeb1e087eb714c7d802ca9e9e5"
+      "sha256": "42edfa9f2861a03acb23df7f0fd8039c3dea233c5f75b203a7bba006acf0b2ab"
     },
     "prizes/max3d/all.csv": {
       "bytes": 5753072,
       "data_rows": 12034,
-      "sha256": "5f7d127a97dfc05015f7454e8308116bf60ca59cdabd51b5531eb8f734063d90"
+      "sha256": "ab1637d9e302c49e128f57d9cf6cea7fac274903ffb9430573ca68b9229ee88a"
     },
     "prizes/max3dpro/all.csv": {
       "bytes": 3011041,
       "data_rows": 5920,
-      "sha256": "099864b9819a7166d6154f7d0f335764d82daf752ff697d796017d72db35c6a6"
+      "sha256": "7a178e6eb1244df9fbef69718bf30cff412bc564888af4672af7f7fe94a691d6"
     },
     "prizes/max4d/all.csv": {
       "bytes": 1764794,
@@ -599,12 +599,12 @@
     "prizes/mega645/all.csv": {
       "bytes": 2248668,
       "data_rows": 6096,
-      "sha256": "9259007541ca1879e2e6f665226cae2bce5f9c2f475bc07692216f6e6ae5b628"
+      "sha256": "80cde5cf83370bd4f70634a571d591c2c0ccf851295e1b8cd2d67100c6f73c30"
     },
     "prizes/power655/all.csv": {
       "bytes": 2544105,
       "data_rows": 6795,
-      "sha256": "d083bcd3815bcbd2346224a1c927a7db4b80d737b1d1fa79e364cc0b4051656e"
+      "sha256": "c9e113471a47f11d569d100d695d801bc1f917a7d42c638f3abe25a85747806d"
     },
     "weather/daily.csv": {
       "bytes": 670958,
@@ -625,7 +625,7 @@
     "weather": "1.0.0"
   },
   "parser_version": "0.2.0",
-  "repository_commit": "f224153bf5ab74fd6dbee6da4638cc04fbb36379",
+  "repository_commit": "00f83d97a35292c791d08bdc71e189b2119cfa2a",
   "schema_version": 1,
   "snapshot_at": "2026-06-17T17:18:23+00:00"
 }
