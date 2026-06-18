@@ -246,6 +246,25 @@ def test_walk_forward_backtest_reports_uniform_baseline() -> None:
         row["target_scope_id"] == target_scope["scope_id"]
         for row in trial_registry["trials"]
     )
+    trial_log = report["trial_disposition_log"]
+    assert trial_log["method"] == "registered_trial_disposition_log"
+    assert trial_log["included_trial_count"] == trial_registry["trial_count"]
+    assert trial_log["failed_trial_count"] == trial_registry["trial_count"]
+    assert trial_log["rejected_configuration_count"] >= 4
+    assert trial_log["retained_record_count"] == (
+        trial_log["included_trial_count"] + trial_log["rejected_configuration_count"]
+    )
+    assert {
+        row["trial_id"] for row in trial_log["included_trials"]
+    } == {
+        row["trial_id"] for row in trial_registry["trials"]
+    }
+    assert all(
+        row["included_in_multiple_testing"] is False
+        and row["evaluated_on_final_scope"] is False
+        and row["reason_code"]
+        for row in trial_log["rejected_configurations"]
+    )
     assert report["baseline"]["strategy"] == "uniform_exact_expectation"
     assert report["baseline"]["method"] == "exact_hypergeometric_expectation"
     assert report["baseline"]["average_hits"] == 0.8
@@ -437,6 +456,14 @@ def test_digit_walk_forward_backtest_reports_digit_score_formula() -> None:
     assert report["multiple_testing_trials"]["trial_count"] == 7
     assert report["multiple_testing_trials"]["published_trial_count"] == 3
     assert report["multiple_testing_trials"]["registered_parameter_variant_count"] == 4
+    trial_log = report["trial_disposition_log"]
+    assert trial_log["included_trial_count"] == 7
+    assert trial_log["failed_trial_count"] == 7
+    assert trial_log["rejected_configuration_count"] >= 4
+    assert any(
+        row["reason_code"] == "tier_breakdown_is_explanatory_not_selection_target"
+        for row in trial_log["rejected_configurations"]
+    )
     assert report["baseline"]["method"] == "exact_sequence_enumeration"
     partial_baseline = report["baseline"]["partial_match_baseline"]
     assert partial_baseline["method"] == "exact_sequence_enumeration"
@@ -559,12 +586,141 @@ def _mock_multiple_testing_trials(
     }
 
 
+def _mock_trial_disposition_log(
+    *,
+    scope_id: str,
+    final_count: int,
+    metric_key: str,
+    trials: list[dict[str, object]],
+) -> dict[str, object]:
+    included_trials = [
+        {
+            "trial_id": trial["trial_id"],
+            "strategy": trial["strategy"],
+            "label": trial["label"],
+            "variant_role": trial["variant_role"],
+            "published": trial["published"],
+            "published_comparison_key": trial["published_comparison_key"],
+            "included_in_multiple_testing": True,
+            "evaluated_on_final_scope": True,
+            "target_scope_id": scope_id,
+            "target_draw_count": final_count,
+            "comparison_metric": metric_key,
+            metric_key: trial[metric_key],
+            "approximate_p_value": trial["approximate_p_value"],
+            "q_value_global_bh": None,
+            "effect_direction": "positive"
+            if float(trial[metric_key]) > 0
+            else "non_positive",
+            "result_status": "failed_raw_baseline_test"
+            if float(trial[metric_key]) > 0
+            else "failed_non_positive_effect",
+            "parameters_sha256": "0" * 64,
+            "parameters": {},
+        }
+        for trial in trials
+    ]
+    return {
+        "method": "registered_trial_disposition_log",
+        "retention_policy": "record_included_failed_and_rejected_backtest_configs",
+        "product_kind": "number_set"
+        if metric_key == "mean_hit_difference"
+        else "digit_sequence",
+        "comparison_metric": metric_key,
+        "scope_policy": "test",
+        "included_trial_count": len(included_trials),
+        "published_trial_count": sum(bool(row["published"]) for row in included_trials),
+        "registered_parameter_variant_count": sum(
+            row["variant_role"] == "registered_parameter_variant"
+            for row in included_trials
+        ),
+        "raw_unadjusted_winning_trial_count": 0,
+        "adjusted_winning_trial_count": 0,
+        "failed_trial_count": len(included_trials),
+        "rejected_configuration_count": 1,
+        "retained_record_count": len(included_trials) + 1,
+        "included_trials": included_trials,
+        "rejected_configurations": [
+            {
+                "config_id": "test:rejected",
+                "label": "Rejected test config",
+                "strategy_family": "test",
+                "disposition": "rejected_before_final_evaluation",
+                "reason_code": "test_guardrail",
+                "reason": "Rejected in test fixture",
+                "target_scope_id": scope_id,
+                "target_draw_count": final_count,
+                "included_in_multiple_testing": False,
+                "evaluated_on_final_scope": False,
+                "published": False,
+                "parameters": {},
+            }
+        ],
+    }
+
+
 def test_finalize_backtests_applies_global_bh_correction() -> None:
     scope = {
         "scope_id": "scope-a",
         "target_draw_count": 10,
         "target_draw_ids_sha256": "a" * 64,
     }
+    first_trials = [
+        _mock_trial(
+            scope_id="scope-a",
+            final_count=10,
+            trial_id="balanced_signal:published_final",
+            metric_key="mean_hit_difference",
+            difference=0.1,
+            p_value=0.01,
+            published_key="comparison",
+        ),
+        _mock_trial(
+            scope_id="scope-a",
+            final_count=10,
+            trial_id="audit_signal:published_final",
+            metric_key="mean_hit_difference",
+            difference=0.1,
+            p_value=0.04,
+            published_key="audit_comparison",
+        ),
+        _mock_trial(
+            scope_id="scope-a",
+            final_count=10,
+            trial_id="short_frequency:shadow",
+            metric_key="mean_hit_difference",
+            difference=0.0,
+            p_value=1.0,
+        ),
+    ]
+    second_trials = [
+        _mock_trial(
+            scope_id="scope-a",
+            final_count=10,
+            trial_id="balanced_signal:published_final",
+            metric_key="mean_position_match_difference",
+            difference=0.1,
+            p_value=0.06,
+            published_key="comparison",
+        ),
+        _mock_trial(
+            scope_id="scope-a",
+            final_count=10,
+            trial_id="audit_signal:published_final",
+            metric_key="mean_position_match_difference",
+            difference=-0.1,
+            p_value=0.001,
+            published_key="audit_comparison",
+        ),
+        _mock_trial(
+            scope_id="scope-a",
+            final_count=10,
+            trial_id="short_frequency:shadow",
+            metric_key="mean_position_match_difference",
+            difference=0.0,
+            p_value=1.0,
+        ),
+    ]
     reports = [
         {
             "product": {"slug": "first"},
@@ -577,34 +733,13 @@ def test_finalize_backtests_applies_global_bh_correction() -> None:
                     scope_id="scope-a",
                     final_count=10,
                     metric_key="mean_hit_difference",
-                    trials=[
-                        _mock_trial(
-                            scope_id="scope-a",
-                            final_count=10,
-                            trial_id="balanced_signal:published_final",
-                            metric_key="mean_hit_difference",
-                            difference=0.1,
-                            p_value=0.01,
-                            published_key="comparison",
-                        ),
-                        _mock_trial(
-                            scope_id="scope-a",
-                            final_count=10,
-                            trial_id="audit_signal:published_final",
-                            metric_key="mean_hit_difference",
-                            difference=0.1,
-                            p_value=0.04,
-                            published_key="audit_comparison",
-                        ),
-                        _mock_trial(
-                            scope_id="scope-a",
-                            final_count=10,
-                            trial_id="short_frequency:shadow",
-                            metric_key="mean_hit_difference",
-                            difference=0.0,
-                            p_value=1.0,
-                        ),
-                    ],
+                    trials=first_trials,
+                ),
+                "trial_disposition_log": _mock_trial_disposition_log(
+                    scope_id="scope-a",
+                    final_count=10,
+                    metric_key="mean_hit_difference",
+                    trials=first_trials,
                 ),
                 "comparison": {
                     "mean_hit_difference": 0.1,
@@ -631,34 +766,13 @@ def test_finalize_backtests_applies_global_bh_correction() -> None:
                     scope_id="scope-a",
                     final_count=10,
                     metric_key="mean_position_match_difference",
-                    trials=[
-                        _mock_trial(
-                            scope_id="scope-a",
-                            final_count=10,
-                            trial_id="balanced_signal:published_final",
-                            metric_key="mean_position_match_difference",
-                            difference=0.1,
-                            p_value=0.06,
-                            published_key="comparison",
-                        ),
-                        _mock_trial(
-                            scope_id="scope-a",
-                            final_count=10,
-                            trial_id="audit_signal:published_final",
-                            metric_key="mean_position_match_difference",
-                            difference=-0.1,
-                            p_value=0.001,
-                            published_key="audit_comparison",
-                        ),
-                        _mock_trial(
-                            scope_id="scope-a",
-                            final_count=10,
-                            trial_id="short_frequency:shadow",
-                            metric_key="mean_position_match_difference",
-                            difference=0.0,
-                            p_value=1.0,
-                        ),
-                    ],
+                    trials=second_trials,
+                ),
+                "trial_disposition_log": _mock_trial_disposition_log(
+                    scope_id="scope-a",
+                    final_count=10,
+                    metric_key="mean_position_match_difference",
+                    trials=second_trials,
                 ),
                 "comparison": {
                     "mean_position_match_difference": 0.1,
@@ -688,6 +802,11 @@ def test_finalize_backtests_applies_global_bh_correction() -> None:
     assert (
         summary["multiple_testing_registry_validation"]["correction_trial_count"] == 6
     )
+    assert summary["trial_disposition_validation"]["status"] == "validated"
+    assert summary["trial_disposition_validation"]["included_trial_count"] == 6
+    assert summary["trial_disposition_validation"]["failed_trial_count"] == 5
+    assert summary["trial_disposition_validation"]["rejected_configuration_count"] == 2
+    assert summary["trial_disposition_validation"]["retained_record_count"] == 8
     assert summary["unadjusted_winning_comparisons"] == 2
     assert summary["adjusted_winning_comparisons"] == 1
     assert summary["products_with_adjusted_win"] == ["first"]
@@ -696,6 +815,16 @@ def test_finalize_backtests_applies_global_bh_correction() -> None:
     assert reports[0]["backtest"]["comparison"]["beats_baseline"] is True
     assert reports[0]["backtest"]["audit_comparison"]["beats_baseline"] is False
     assert reports[1]["backtest"]["audit_comparison"]["beats_baseline"] is False
+    first_trial_log = reports[0]["backtest"]["trial_disposition_log"]
+    assert first_trial_log["adjusted_winning_trial_count"] == 1
+    assert first_trial_log["failed_trial_count"] == 2
+    assert {
+        row["result_status"] for row in first_trial_log["included_trials"]
+    } == {
+        "adjusted_win",
+        "raw_win_failed_global_correction",
+        "failed_non_positive_effect",
+    }
 
 
 def test_finalize_backtests_rejects_target_scope_mismatch() -> None:

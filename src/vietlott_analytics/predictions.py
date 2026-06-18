@@ -115,6 +115,67 @@ BACKTEST_DIGIT_SHADOW_TRIALS = (
         "parameters": {"score_policy": "audit_unclipped_z_scores"},
     },
 )
+BACKTEST_COMMON_REJECTED_CONFIGURATIONS = (
+    {
+        "config_id": "posthoc_best_variant_picker",
+        "label": "Chọn biến thể thắng nhất sau khi xem phase cuối",
+        "strategy_family": "model_selection",
+        "reason_code": "would_use_final_evaluation_feedback",
+        "reason": (
+            "Cấu hình này bị loại vì dùng kết quả phase đánh giá cuối để chọn mô "
+            "hình, làm rò rỉ dữ liệu vào quyết định công bố."
+        ),
+        "parameters": {"selection_rule": "pick_best_final_phase_p_value"},
+    },
+    {
+        "config_id": "prize_weighted_score",
+        "label": "Điểm theo trọng số giải thưởng",
+        "strategy_family": "score_target",
+        "reason_code": "incomplete_prize_coverage",
+        "reason": (
+            "Dữ liệu giải thưởng theo kỳ chưa phủ đủ mọi sản phẩm, đặc biệt Keno "
+            "và Bingo18, nên không dùng làm mục tiêu backtest toàn hệ thống."
+        ),
+        "parameters": {"score_basis": "prize_tier_weighted_hit"},
+    },
+    {
+        "config_id": "future_centered_window",
+        "label": "Cửa sổ tần suất đặt giữa quanh kỳ đích",
+        "strategy_family": "data_window",
+        "reason_code": "would_include_future_draws",
+        "reason": (
+            "Cửa sổ đặt giữa quanh kỳ đích cần dữ liệu sau kỳ đang dự đoán, trái "
+            "quy tắc walk-forward chỉ dùng lịch sử trước kỳ t."
+        ),
+        "parameters": {"window_policy": "centered_on_target_draw"},
+    },
+)
+BACKTEST_NUMBER_REJECTED_CONFIGURATIONS = (
+    {
+        "config_id": "special_number_scoring",
+        "label": "Tính điểm số đặc biệt chung với số chính",
+        "strategy_family": "score_target",
+        "reason_code": "not_comparable_across_number_products",
+        "reason": (
+            "Số đặc biệt không tồn tại ở mọi sản phẩm tập số và có miền giá trị "
+            "khác số chính, nên bị loại khỏi điểm backtest chính."
+        ),
+        "parameters": {"score_basis": "main_and_special_numbers_combined"},
+    },
+)
+BACKTEST_DIGIT_REJECTED_CONFIGURATIONS = (
+    {
+        "config_id": "tier_weighted_digit_score",
+        "label": "Trọng số chuỗi chữ số theo hạng giải",
+        "strategy_family": "score_target",
+        "reason_code": "tier_breakdown_is_explanatory_not_selection_target",
+        "reason": (
+            "Phân rã theo hạng giải chỉ là metadata giải thích audit; dùng làm "
+            "mục tiêu chọn mô hình sẽ tạo thêm mục tiêu hậu nghiệm."
+        ),
+        "parameters": {"score_basis": "tier_weighted_digit_outcomes"},
+    },
+)
 
 
 @dataclass(slots=True)
@@ -431,6 +492,7 @@ def finalize_backtests(product_reports: list[dict[str, Any]]) -> dict[str, Any]:
     target_scopes: list[dict[str, Any]] = []
     phase_splits: list[dict[str, Any]] = []
     trial_registries: list[dict[str, Any]] = []
+    completed_backtests: list[tuple[str, dict[str, Any]]] = []
     completed_products = 0
     for report in product_reports:
         backtest = report.get("backtest")
@@ -439,8 +501,10 @@ def finalize_backtests(product_reports: list[dict[str, Any]]) -> dict[str, Any]:
         _validate_backtest_target_scope(backtest)
         _validate_backtest_phase_split(backtest)
         _validate_backtest_multiple_testing_trials(backtest)
+        _validate_backtest_trial_disposition_log(backtest)
         completed_products += 1
         product_slug = str(report["product"]["slug"])
+        completed_backtests.append((product_slug, backtest))
         target_scope = backtest.get("target_scope")
         if isinstance(target_scope, dict):
             target_scopes.append(
@@ -548,6 +612,33 @@ def finalize_backtests(product_reports: list[dict[str, Any]]) -> dict[str, Any]:
             if adjusted:
                 products_with_adjusted_win.add(product_slug)
 
+    trial_disposition_summaries = []
+    for product_slug, backtest in completed_backtests:
+        registry = backtest.get("multiple_testing_trials", {})
+        log = backtest.get("trial_disposition_log", {})
+        if isinstance(registry, dict) and isinstance(log, dict):
+            trials = registry.get("trials", [])
+            if isinstance(trials, list):
+                _sync_backtest_trial_disposition_log(log, trials)
+                _validate_backtest_trial_disposition_log(backtest)
+                trial_disposition_summaries.append(
+                    {
+                        "product": product_slug,
+                        "included_trial_count": log.get("included_trial_count"),
+                        "failed_trial_count": log.get("failed_trial_count"),
+                        "raw_unadjusted_winning_trial_count": log.get(
+                            "raw_unadjusted_winning_trial_count"
+                        ),
+                        "adjusted_winning_trial_count": log.get(
+                            "adjusted_winning_trial_count"
+                        ),
+                        "rejected_configuration_count": log.get(
+                            "rejected_configuration_count"
+                        ),
+                        "retained_record_count": log.get("retained_record_count"),
+                    }
+                )
+
     return {
         "schema_version": 1,
         "comparison_count": published_comparison_count,
@@ -572,6 +663,40 @@ def finalize_backtests(product_reports: list[dict[str, Any]]) -> dict[str, Any]:
             "interpretation": (
                 "Benjamini-Hochberg dùng toàn bộ trial đã đăng ký trong "
                 "multiple_testing_trials, gồm mô hình công bố và biến thể tham số."
+            ),
+        },
+        "trial_disposition_validation": {
+            "status": "validated",
+            "method": "registered_trial_disposition_log",
+            "product_count": len(trial_disposition_summaries),
+            "included_trial_count": sum(
+                int(row.get("included_trial_count") or 0)
+                for row in trial_disposition_summaries
+            ),
+            "failed_trial_count": sum(
+                int(row.get("failed_trial_count") or 0)
+                for row in trial_disposition_summaries
+            ),
+            "raw_unadjusted_winning_trial_count": sum(
+                int(row.get("raw_unadjusted_winning_trial_count") or 0)
+                for row in trial_disposition_summaries
+            ),
+            "adjusted_winning_trial_count": sum(
+                int(row.get("adjusted_winning_trial_count") or 0)
+                for row in trial_disposition_summaries
+            ),
+            "rejected_configuration_count": sum(
+                int(row.get("rejected_configuration_count") or 0)
+                for row in trial_disposition_summaries
+            ),
+            "retained_record_count": sum(
+                int(row.get("retained_record_count") or 0)
+                for row in trial_disposition_summaries
+            ),
+            "products": trial_disposition_summaries,
+            "interpretation": (
+                "Mỗi sản phẩm lưu trial đã chạy nhưng không thắng sau hiệu chỉnh "
+                "và các cấu hình bị loại trước phase đánh giá cuối."
             ),
         },
         "target_scope_validation": {
@@ -734,6 +859,153 @@ def _backtest_trial_row(
         **_normal_mean_interval(differences),
         "parameters": parameters,
     }
+
+
+def _backtest_trial_disposition_log(
+    product_kind: str,
+    metric_key: str,
+    trials: list[dict[str, Any]],
+    scope_fields: dict[str, Any],
+) -> dict[str, Any]:
+    log = {
+        "schema_version": 1,
+        "method": "registered_trial_disposition_log",
+        "retention_policy": "record_included_failed_and_rejected_backtest_configs",
+        "product_kind": product_kind,
+        "comparison_metric": metric_key,
+        "scope_policy": (
+            "all_recorded_trials_share_final_evaluation_scope; rejected_configs_are_not_evaluated"
+        ),
+        "rejected_configurations": _backtest_rejected_configurations(
+            product_kind,
+            scope_fields,
+        ),
+    }
+    _sync_backtest_trial_disposition_log(log, trials)
+    return log
+
+
+def _backtest_rejected_configurations(
+    product_kind: str,
+    scope_fields: dict[str, Any],
+) -> list[dict[str, Any]]:
+    templates = [*BACKTEST_COMMON_REJECTED_CONFIGURATIONS]
+    if product_kind == "number_set":
+        templates.extend(BACKTEST_NUMBER_REJECTED_CONFIGURATIONS)
+    else:
+        templates.extend(BACKTEST_DIGIT_REJECTED_CONFIGURATIONS)
+    rows = []
+    for template in templates:
+        rows.append(
+            {
+                "config_id": f"{product_kind}:{template['config_id']}",
+                "label": template["label"],
+                "strategy_family": template["strategy_family"],
+                "disposition": "rejected_before_final_evaluation",
+                "reason_code": template["reason_code"],
+                "reason": template["reason"],
+                **scope_fields,
+                "included_in_multiple_testing": False,
+                "evaluated_on_final_scope": False,
+                "published": False,
+                "parameters": dict(template["parameters"]),
+            }
+        )
+    return rows
+
+
+def _sync_backtest_trial_disposition_log(
+    log: dict[str, Any],
+    trials: list[dict[str, Any]],
+) -> None:
+    included_trials = [
+        _backtest_trial_disposition_row(trial)
+        for trial in trials
+    ]
+    adjusted_wins = sum(
+        row["result_status"] == "adjusted_win"
+        for row in included_trials
+    )
+    raw_wins = sum(
+        row["result_status"] in {
+            "adjusted_win",
+            "raw_win_failed_global_correction",
+            "raw_win_pending_global_correction",
+        }
+        for row in included_trials
+    )
+    rejected_configurations = log.get("rejected_configurations", [])
+    log.update(
+        {
+            "included_trial_count": len(included_trials),
+            "published_trial_count": sum(
+                bool(row["published"]) for row in included_trials
+            ),
+            "registered_parameter_variant_count": sum(
+                row["variant_role"] == "registered_parameter_variant"
+                for row in included_trials
+            ),
+            "raw_unadjusted_winning_trial_count": raw_wins,
+            "adjusted_winning_trial_count": adjusted_wins,
+            "failed_trial_count": len(included_trials) - adjusted_wins,
+            "rejected_configuration_count": len(rejected_configurations),
+            "retained_record_count": len(included_trials)
+            + len(rejected_configurations),
+            "included_trials": included_trials,
+        }
+    )
+
+
+def _backtest_trial_disposition_row(trial: dict[str, Any]) -> dict[str, Any]:
+    metric_key = "mean_hit_difference"
+    if "mean_position_match_difference" in trial:
+        metric_key = "mean_position_match_difference"
+    parameters = trial.get("parameters")
+    if not isinstance(parameters, dict):
+        parameters = {}
+    row = {
+        "trial_id": trial.get("trial_id"),
+        "strategy": trial.get("strategy"),
+        "label": trial.get("label"),
+        "variant_role": trial.get("variant_role"),
+        "published": bool(trial.get("published")),
+        "published_comparison_key": trial.get("published_comparison_key"),
+        "included_in_multiple_testing": True,
+        "evaluated_on_final_scope": True,
+        "target_scope_id": trial.get("target_scope_id"),
+        "target_draw_count": trial.get("target_draw_count"),
+        "comparison_metric": metric_key,
+        metric_key: trial.get(metric_key),
+        "approximate_p_value": trial.get("approximate_p_value"),
+        "q_value_global_bh": trial.get("q_value_global_bh"),
+        "effect_direction": (
+            "positive"
+            if _comparison_difference(trial) > 0
+            else "non_positive"
+        ),
+        "result_status": _backtest_trial_result_status(trial),
+        "parameters_sha256": _stable_json_sha256(parameters),
+        "parameters": parameters,
+    }
+    return row
+
+
+def _backtest_trial_result_status(trial: dict[str, Any]) -> str:
+    if _comparison_difference(trial) <= 0:
+        return "failed_non_positive_effect"
+    if trial.get("beats_baseline") is True:
+        return "adjusted_win"
+    if trial.get("beats_baseline_unadjusted") is True:
+        if "q_value_global_bh" in trial:
+            return "raw_win_failed_global_correction"
+        return "raw_win_pending_global_correction"
+    return "failed_raw_baseline_test"
+
+
+def _stable_json_sha256(value: dict[str, Any]) -> str:
+    return hashlib.sha256(
+        json.dumps(value, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    ).hexdigest()
 
 
 def _backtest_multiple_testing_trials(
@@ -982,6 +1254,72 @@ def _validate_backtest_multiple_testing_trials(backtest: dict[str, Any]) -> None
         raise ValueError("Backtest multiple_testing_trials published count mismatch")
     if registry.get("registered_parameter_variant_count") != len(trials) - len(published_keys):
         raise ValueError("Backtest multiple_testing_trials variant count mismatch")
+
+
+def _validate_backtest_trial_disposition_log(backtest: dict[str, Any]) -> None:
+    log = backtest.get("trial_disposition_log")
+    registry = backtest.get("multiple_testing_trials")
+    target_scope = backtest.get("target_scope")
+    if not isinstance(log, dict):
+        raise ValueError("Backtest trial_disposition_log missing")
+    if not isinstance(registry, dict):
+        raise ValueError("Backtest multiple_testing_trials missing")
+    if not isinstance(target_scope, dict):
+        raise ValueError("Backtest target_scope missing")
+    included_trials = log.get("included_trials")
+    rejected_configurations = log.get("rejected_configurations")
+    registry_trials = registry.get("trials")
+    if not isinstance(included_trials, list) or not isinstance(registry_trials, list):
+        raise ValueError("Backtest trial_disposition_log included trials invalid")
+    if not isinstance(rejected_configurations, list) or not rejected_configurations:
+        raise ValueError("Backtest trial_disposition_log rejected configs missing")
+    if log.get("included_trial_count") != len(registry_trials):
+        raise ValueError("Backtest trial_disposition_log included count mismatch")
+    if log.get("rejected_configuration_count") != len(rejected_configurations):
+        raise ValueError("Backtest trial_disposition_log rejected count mismatch")
+    if log.get("retained_record_count") != len(included_trials) + len(rejected_configurations):
+        raise ValueError("Backtest trial_disposition_log retained count mismatch")
+    registry_ids = {trial.get("trial_id") for trial in registry_trials}
+    included_ids = {trial.get("trial_id") for trial in included_trials}
+    if registry_ids != included_ids:
+        raise ValueError("Backtest trial_disposition_log trial ids mismatch")
+    failed_count = sum(
+        row.get("result_status") != "adjusted_win"
+        for row in included_trials
+        if isinstance(row, dict)
+    )
+    if log.get("failed_trial_count") != failed_count:
+        raise ValueError("Backtest trial_disposition_log failed count mismatch")
+    expected_scope_id = target_scope.get("scope_id")
+    expected_count = target_scope.get("target_draw_count")
+    for row in included_trials:
+        if not isinstance(row, dict):
+            raise ValueError("Backtest trial_disposition_log included row invalid")
+        if row.get("included_in_multiple_testing") is not True:
+            raise ValueError("Backtest trial_disposition_log included row not retained")
+        if row.get("evaluated_on_final_scope") is not True:
+            raise ValueError("Backtest trial_disposition_log included row not evaluated")
+        if row.get("target_scope_id") != expected_scope_id:
+            raise ValueError("Backtest trial_disposition_log included scope mismatch")
+        if row.get("target_draw_count") != expected_count:
+            raise ValueError("Backtest trial_disposition_log included count mismatch")
+        if not isinstance(row.get("parameters_sha256"), str):
+            raise ValueError("Backtest trial_disposition_log parameter hash missing")
+    for row in rejected_configurations:
+        if not isinstance(row, dict):
+            raise ValueError("Backtest trial_disposition_log rejected row invalid")
+        if row.get("disposition") != "rejected_before_final_evaluation":
+            raise ValueError("Backtest trial_disposition_log rejected disposition invalid")
+        if row.get("included_in_multiple_testing") is not False:
+            raise ValueError("Backtest trial_disposition_log rejected row retained")
+        if row.get("evaluated_on_final_scope") is not False:
+            raise ValueError("Backtest trial_disposition_log rejected row evaluated")
+        if row.get("target_scope_id") != expected_scope_id:
+            raise ValueError("Backtest trial_disposition_log rejected scope mismatch")
+        if row.get("target_draw_count") != expected_count:
+            raise ValueError("Backtest trial_disposition_log rejected count mismatch")
+        if not row.get("reason_code"):
+            raise ValueError("Backtest trial_disposition_log rejected reason missing")
 
 
 def _forecast_events(dataset: ProductDataset) -> list[dict[str, Any]]:
@@ -1403,6 +1741,12 @@ def _number_backtest(dataset: ProductDataset) -> dict[str, object]:
             ],
         ],
     )
+    trial_disposition_log = _backtest_trial_disposition_log(
+        "number_set",
+        "mean_hit_difference",
+        multiple_testing_trials["trials"],
+        scope_fields,
+    )
     report = {
         "schema_version": 2,
         "status": "complete",
@@ -1412,6 +1756,7 @@ def _number_backtest(dataset: ProductDataset) -> dict[str, object]:
         "target_scope": target_scope,
         "phase_split": phase_split,
         "multiple_testing_trials": multiple_testing_trials,
+        "trial_disposition_log": trial_disposition_log,
         "score_formulas": _number_backtest_score_formulas(),
         "first_walk_forward_draw_id": observations[start].draw_id,
         "first_test_draw_id": observations[evaluation_start_index].draw_id,
@@ -1492,6 +1837,7 @@ def _number_backtest(dataset: ProductDataset) -> dict[str, object]:
     _validate_backtest_target_scope(report)
     _validate_backtest_phase_split(report)
     _validate_backtest_multiple_testing_trials(report)
+    _validate_backtest_trial_disposition_log(report)
     return report
 
 
@@ -1708,6 +2054,12 @@ def _digit_backtest(dataset: ProductDataset) -> dict[str, object]:
             ],
         ],
     )
+    trial_disposition_log = _backtest_trial_disposition_log(
+        "digit_sequence",
+        "mean_position_match_difference",
+        multiple_testing_trials["trials"],
+        scope_fields,
+    )
     report = {
         "schema_version": 2,
         "status": "complete",
@@ -1717,6 +2069,7 @@ def _digit_backtest(dataset: ProductDataset) -> dict[str, object]:
         "target_scope": target_scope,
         "phase_split": phase_split,
         "multiple_testing_trials": multiple_testing_trials,
+        "trial_disposition_log": trial_disposition_log,
         "score_formulas": _digit_backtest_score_formulas(),
         "first_walk_forward_draw_id": observations[start].draw_id,
         "first_test_draw_id": observations[evaluation_start_index].draw_id,
@@ -1810,6 +2163,7 @@ def _digit_backtest(dataset: ProductDataset) -> dict[str, object]:
     _validate_backtest_target_scope(report)
     _validate_backtest_phase_split(report)
     _validate_backtest_multiple_testing_trials(report)
+    _validate_backtest_trial_disposition_log(report)
     return report
 
 

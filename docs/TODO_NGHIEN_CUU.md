@@ -437,7 +437,16 @@ file để giữ lại dấu vết thay đổi.
   - Website hiển thị "Registry hiệu chỉnh nhiều phép thử"; tài liệu hóa trong
     `docs/BACKTEST_MULTIPLE_TESTING.md` và khóa bằng unit test, documentation test,
     static-site test.
-- [ ] `BACKTEST-008` Lưu lại cả thử nghiệm thất bại và cấu hình bị loại.
+- [x] `BACKTEST-008` Lưu lại cả thử nghiệm thất bại và cấu hình bị loại.
+  - Hoàn thành ngày 18/06/2026.
+  - Mỗi report backtest có `trial_disposition_log` lưu mọi trial đã chạy trong
+    registry, trạng thái thắng/thất bại sau hiệu chỉnh và các cấu hình bị loại
+    trước phase đánh giá cuối kèm `reason_code`.
+  - `finalize_backtests` validate log trước/sau khi gắn q-value và công bố
+    `manifest.backtest_summary.trial_disposition_validation`.
+  - Website hiển thị "Nhật ký trial thất bại và bị loại"; tài liệu hóa trong
+    `docs/BACKTEST_TRIAL_DISPOSITION.md` và khóa bằng unit test, documentation test,
+    static-site test.
 - [ ] `BACKTEST-009` Thêm kiểm tra độ nhạy theo độ dài cửa sổ 50, 200, 500 kỳ và
   các giá trị được đăng ký trước khác.
 

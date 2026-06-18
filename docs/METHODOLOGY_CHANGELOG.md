@@ -59,6 +59,9 @@ backtest hoặc cách đọc website. Thay đổi giao diện thuần túy khôn
   thật sự
 - `manifest.backtest_summary.multiple_testing_registry_validation` công bố trạng
   thái validate registry và bắt q-value của comparison dùng scope trial rộng hơn
+- Thêm `backtest.trial_disposition_log`, lưu mọi trial đã chạy nhưng không thắng
+  sau hiệu chỉnh cùng các cấu hình bị loại trước phase đánh giá cuối; manifest
+  công bố `trial_disposition_validation`
 
 ## 15/06/2026
 

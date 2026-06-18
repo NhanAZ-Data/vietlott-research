@@ -42,3 +42,7 @@ bố không khớp p-value với comparison tương ứng, lệnh tạo báo cá
 
 `manifest.backtest_summary.multiple_testing_registry_validation` công bố trạng
 thái validate toàn hệ thống, gồm số comparison công bố và số trial correction.
+
+Các trial không thắng sau hiệu chỉnh và cấu hình bị loại trước phase đánh giá
+cuối được lưu riêng trong `backtest.trial_disposition_log`. Trường này không đổi
+q-value, nhưng giữ dấu vết những thử nghiệm âm và lý do loại bỏ cấu hình.

@@ -1659,6 +1659,9 @@ function renderBacktest(backtest, kind) {
   const scoreDescription = renderBacktestScoreFormulas(backtest.score_formulas, kind);
   const phaseDescription = renderBacktestPhaseSplit(backtest.phase_split);
   const multipleTestingDescription = renderBacktestMultipleTestingScope(backtest);
+  const trialDispositionDescription = renderBacktestTrialDisposition(
+    backtest.trial_disposition_log,
+  );
   container.innerHTML = `
     <div class="backtest-score">
       ${modelRows.map((row) => {
@@ -1710,6 +1713,7 @@ function renderBacktest(backtest, kind) {
           <li><strong>Baseline đồng đều chính xác</strong><span>Với tập số, kỳ vọng và phân bố số trùng được tính bằng phân bố siêu bội. Với chuỗi chữ số, chương trình đếm chính xác toàn bộ không gian chuỗi hợp lệ của từng kỳ. Kết quả không phụ thuộc seed.</span></li>
           <li><strong>So sánh theo từng kỳ</strong><span>Với mỗi kỳ tính d = điểm chiến lược - điểm kỳ vọng đồng đều. Báo cáo lấy trung bình d và tính z = trung bình(d) / (độ lệch chuẩn(d) / √n), rồi lấy p hai phía từ phân bố chuẩn.</span></li>
           ${multipleTestingDescription}
+          ${trialDispositionDescription}
         </ol>
         <p>
           Mã triển khai nằm trong
@@ -1747,6 +1751,20 @@ function renderBacktestMultipleTestingScope(backtest) {
       gồm ${numberFormatter.format(publishedCount)} mô hình công bố và
       ${numberFormatter.format(variantCount)} biến thể tham số đã đăng ký/thử.
       Chỉ ghi "vượt baseline" khi trung bình d &gt; 0 và q toàn hệ thống &lt; 0,05.
+    </span></li>`;
+}
+
+function renderBacktestTrialDisposition(log) {
+  if (!log) return "";
+  const included = log.included_trial_count || 0;
+  const failed = log.failed_trial_count || 0;
+  const rejected = log.rejected_configuration_count || 0;
+  return `
+    <li><strong>Nhật ký trial thất bại và bị loại</strong><span>
+      Lưu ${numberFormatter.format(included)} trial đã chạy trong registry,
+      trong đó ${numberFormatter.format(failed)} trial chưa thắng sau hiệu chỉnh.
+      ${numberFormatter.format(rejected)} cấu hình bị loại trước phase đánh giá cuối
+      vẫn được giữ kèm lý do để tránh bỏ sót thử nghiệm âm.
     </span></li>`;
 }
 

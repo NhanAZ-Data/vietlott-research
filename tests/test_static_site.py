@@ -20,7 +20,7 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert 'id="phan-tich"' in index
     assert 'id="du-doan"' in index
     assert 'id="kiem-dinh"' in index
-    assert "assets/app.js?v=20260618-9" in index
+    assert "assets/app.js?v=20260618-10" in index
     assert "archive-summary-heading" in index
     assert "Sổ dự đoán toàn hệ thống" in index
     assert "assets/docs.js?v=20260618-2" in data_page
@@ -140,6 +140,9 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert "Tách chọn công thức và đánh giá cuối" in app_script
     assert "renderBacktestMultipleTestingScope" in app_script
     assert "Registry hiệu chỉnh nhiều phép thử" in app_script
+    assert "renderBacktestTrialDisposition" in app_script
+    assert "Nhật ký trial thất bại và bị loại" in app_script
+    assert "trial_disposition_log" in method_page
     assert "Baseline trùng một phần" in app_script
     assert "Thước đo riêng" in app_script
     assert "Ba chiến lược ứng viên" in method_page
@@ -217,6 +220,22 @@ def test_generated_site_data_matches_manifest() -> None:
     assert registry_validation["correction_trial_count"] == manifest[
         "backtest_summary"
     ]["correction_trial_count"]
+    disposition_validation = manifest["backtest_summary"]["trial_disposition_validation"]
+    assert disposition_validation["status"] == "validated"
+    assert disposition_validation["product_count"] == len(manifest["products"])
+    assert disposition_validation["included_trial_count"] == manifest[
+        "backtest_summary"
+    ]["correction_trial_count"]
+    assert disposition_validation["failed_trial_count"] >= manifest[
+        "backtest_summary"
+    ]["correction_trial_count"] - disposition_validation["adjusted_winning_trial_count"]
+    assert disposition_validation["rejected_configuration_count"] >= len(
+        manifest["products"]
+    )
+    assert disposition_validation["retained_record_count"] == (
+        disposition_validation["included_trial_count"]
+        + disposition_validation["rejected_configuration_count"]
+    )
     target_scope_validation = manifest["backtest_summary"]["target_scope_validation"]
     assert target_scope_validation["status"] == "validated"
     assert target_scope_validation["product_count"] == len(manifest["products"])
@@ -429,6 +448,23 @@ def test_generated_site_data_matches_manifest() -> None:
             for row in trial_registry["trials"]
             if row["published"]
         } == {"comparison", "recent_comparison", "audit_comparison"}
+        trial_log = report["backtest"]["trial_disposition_log"]
+        assert trial_log["included_trial_count"] == trial_registry["trial_count"]
+        assert trial_log["rejected_configuration_count"] >= 4
+        assert trial_log["retained_record_count"] == (
+            trial_log["included_trial_count"]
+            + trial_log["rejected_configuration_count"]
+        )
+        assert {
+            row["trial_id"] for row in trial_log["included_trials"]
+        } == {
+            row["trial_id"] for row in trial_registry["trials"]
+        }
+        assert all(
+            row["disposition"] == "rejected_before_final_evaluation"
+            and row["reason_code"]
+            for row in trial_log["rejected_configurations"]
+        )
         for key in ("comparison", "recent_comparison", "audit_comparison"):
             assert report["backtest"][key]["multiple_testing_scope"] == manifest[
                 "backtest_summary"

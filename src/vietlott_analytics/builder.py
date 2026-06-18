@@ -221,6 +221,9 @@ def _build_analysis_export(
                 "multiple_testing_trial_field": (
                     "product_reports[*].backtest.multiple_testing_trials"
                 ),
+                "trial_disposition_log_field": (
+                    "product_reports[*].backtest.trial_disposition_log"
+                ),
                 "score_units": {
                     "number_set": "main_number_hits_per_draw",
                     "digit_sequence": "best_position_matches_per_draw",
@@ -242,6 +245,10 @@ def _build_analysis_export(
                     "backtest_summary",
                     {},
                 ).get("multiple_testing_registry_validation", {}),
+                "trial_disposition_validation": manifest.get(
+                    "backtest_summary",
+                    {},
+                ).get("trial_disposition_validation", {}),
                 "win_rule": "mean_difference > 0 and global_bh_q < 0.05",
                 "important_limitations": [
                     "Điểm backtest tập số hiện chỉ tính số chính, chưa tính số đặc biệt.",
