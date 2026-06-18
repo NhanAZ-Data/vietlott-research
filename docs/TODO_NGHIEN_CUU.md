@@ -335,7 +335,16 @@ file để giữ lại dấu vết thay đổi.
   - Tài liệu hóa trong `docs/AUDIT_KENO_PAIR_COOCCURRENCE.md`; khóa bằng unit test,
     documentation test và static-site test.
 
-- [ ] `AUDIT-015` Thêm kiểm tra độ nhạy khi loại từng nguồn dữ liệu.
+- [x] `AUDIT-015` Thêm kiểm tra độ nhạy khi loại từng nguồn dữ liệu.
+  - Hoàn thành ngày 18/06/2026.
+  - `digit_position_chi_square.parameters.source_leave_one_out` loại từng nguồn
+    dữ liệu rồi tính lại chi-square, `effect_size`, residual nổi bật và chênh lệch
+    so với baseline toàn bộ dữ liệu.
+  - Bảng dùng cùng provenance với `source_breakdown`, công bố `no_new_p_values = true`
+    và không thay p-value, q-value hoặc trạng thái chính của kiểm định.
+  - Website hiển thị panel "Độ nhạy loại nguồn"; tài liệu hóa trong
+    `docs/AUDIT_SOURCE_SENSITIVITY.md` và khóa bằng unit test, documentation test,
+    static-site test.
 - [ ] `AUDIT-016` Thêm kiểm tra độ nhạy khi loại các kỳ chưa xác nhận và vùng lịch sử
   có độ tin cậy thấp.
 

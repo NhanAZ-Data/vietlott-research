@@ -5,6 +5,7 @@ import unicodedata
 from pathlib import Path
 
 import jsonschema
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -82,15 +83,19 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert "renderAuditTierBreakdown" in app_script
     assert "renderAuditPeriodBreakdown" in app_script
     assert "renderAuditSourceBreakdown" in app_script
+    assert "renderAuditSourceLeaveOneOut" in app_script
     assert "Ô nào đóng góp nhiều vào độ lệch tổng?" in app_script
     assert "Phân rã residual, không tạo p-value mới" in app_script
     assert "Giai đoạn không chồng lấn" in app_script
     assert "Nguồn dữ liệu" in app_script
+    assert "Độ nhạy loại nguồn" in app_script
+    assert "Bỏ một nguồn thì tín hiệu đổi bao nhiêu?" in app_script
     assert "threshold-sensitivity-grid" in styles
     assert "position-residual-grid" in styles
     assert "position-tier-grid" in styles
     assert "position-period-grid" in styles
     assert "position-source-grid" in styles
+    assert "position-source-sensitivity-grid" in styles
     assert "audit-test-details" in app_script
     assert "audit-test-list-inner" in styles
     assert 'text("ribbon-product-count"' in app_script
@@ -333,6 +338,22 @@ def test_generated_site_data_matches_manifest() -> None:
             assert source_breakdown["no_new_p_values"] is True
             assert source_breakdown["sources"]
             assert all("p_value" not in source for source in source_breakdown["sources"])
+            source_leave_one_out = position_test["parameters"]["source_leave_one_out"]
+            assert source_leave_one_out["method"] == "source_leave_one_out"
+            assert source_leave_one_out["no_new_p_values"] is True
+            assert source_leave_one_out["baseline"]["statistic"] == pytest.approx(
+                position_test["statistic"],
+                abs=1e-4,
+            )
+            if source_leave_one_out["source_count"] > 1:
+                assert source_leave_one_out["excluded_sources"]
+                assert all(
+                    "p_value" not in source
+                    for source in source_leave_one_out["excluded_sources"]
+                )
+            else:
+                assert source_leave_one_out["status"] == "single_source"
+                assert source_leave_one_out["excluded_sources"] == []
             if product["slug"] == "max4d":
                 assert any(
                     row["result_type"] == "wildcard_prefix"

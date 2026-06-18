@@ -296,6 +296,43 @@ def test_finalize_audits_adds_global_correction_and_jsonl_events() -> None:
         for source in source_breakdown["sources"]
         for residual in source["top_residuals"]
     )
+    source_leave_one_out = position_test["parameters"]["source_leave_one_out"]
+    assert source_leave_one_out["status"] == "available"
+    assert source_leave_one_out["method"] == "source_leave_one_out"
+    assert source_leave_one_out["no_new_p_values"] is True
+    assert source_leave_one_out["eligible_source_count"] == 2
+    assert source_leave_one_out["baseline"]["statistic"] == pytest.approx(
+        position_test["statistic"],
+        abs=1e-4,
+    )
+    assert {
+        source["excluded_source_key"]
+        for source in source_leave_one_out["excluded_sources"]
+    } == {
+        "community_mirror",
+        "official_vietlott",
+    }
+    assert all(
+        source["sample_status"] == "usable"
+        for source in source_leave_one_out["excluded_sources"]
+    )
+    assert all(
+        source["remaining_draws"] == 60
+        for source in source_leave_one_out["excluded_sources"]
+    )
+    assert all(
+        "p_value" not in source
+        for source in source_leave_one_out["excluded_sources"]
+    )
+    assert all(
+        "p_value" not in residual
+        for source in source_leave_one_out["excluded_sources"]
+        for residual in source["top_residuals"]
+    )
+    assert source_leave_one_out["strongest_effect_shift"]["excluded_source_key"] in {
+        "community_mirror",
+        "official_vietlott",
+    }
     digit_permutation = next(
         item["parameters"]["permutation_check"]
         for item in report["audit"]["tests"]

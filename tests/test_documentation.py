@@ -13,6 +13,7 @@ def test_research_documentation_and_issue_templates_exist() -> None:
         ROOT / "docs" / "AUDIT_TIER_BREAKDOWN.md",
         ROOT / "docs" / "AUDIT_PERIOD_BREAKDOWN.md",
         ROOT / "docs" / "AUDIT_SOURCE_BREAKDOWN.md",
+        ROOT / "docs" / "AUDIT_SOURCE_SENSITIVITY.md",
         ROOT / "docs" / "AUDIT_POWER_ANALYSIS.md",
         ROOT / "docs" / "AUDIT_PERMUTATION_CHECKS.md",
         ROOT / "docs" / "AUDIT_BLOCK_BOOTSTRAP.md",
@@ -41,6 +42,7 @@ def test_readme_links_research_documents_without_em_dash() -> None:
     assert "docs/AUDIT_TIER_BREAKDOWN.md" in readme
     assert "docs/AUDIT_PERIOD_BREAKDOWN.md" in readme
     assert "docs/AUDIT_SOURCE_BREAKDOWN.md" in readme
+    assert "docs/AUDIT_SOURCE_SENSITIVITY.md" in readme
     assert "docs/AUDIT_POWER_ANALYSIS.md" in readme
     assert "docs/AUDIT_PERMUTATION_CHECKS.md" in readme
     assert "docs/AUDIT_BLOCK_BOOTSTRAP.md" in readme
@@ -112,6 +114,18 @@ def test_audit_source_breakdown_documentation_has_required_fields() -> None:
     assert "attributes_json.data_source" in document
     assert "no_new_p_values" in document
     assert "top_residuals" in document
+
+
+def test_audit_source_sensitivity_documentation_has_required_fields() -> None:
+    document = (ROOT / "docs" / "AUDIT_SOURCE_SENSITIVITY.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "source_leave_one_out" in document
+    assert "digit_position_chi_square" in document
+    assert "attributes_json.data_source" in document
+    assert "no_new_p_values" in document
+    assert "effect_size_delta" in document
 
 
 def test_audit_power_analysis_documentation_has_required_fields() -> None:

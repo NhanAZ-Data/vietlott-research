@@ -798,6 +798,7 @@ function renderAuditPositionResiduals(audit) {
       ${renderAuditTierBreakdown(test)}
       ${renderAuditPeriodBreakdown(test)}
       ${renderAuditSourceBreakdown(test)}
+      ${renderAuditSourceLeaveOneOut(test)}
     </section>`;
 }
 
@@ -923,6 +924,68 @@ function renderAuditSourceBreakdown(test) {
             ${source.sample_note ? `<p>${escapeHtml(source.sample_note)}</p>` : ""}
             <div class="position-source-residuals">
               ${(source.top_residuals || []).map((item) => `
+                <span title="Vị trí ${item.position}, số ${item.digit}: quan sát ${numberFormatter.format(item.observed)}, kỳ vọng ${formatDecimal(item.expected, 1)}">
+                  V${escapeHtml(item.position)}:${escapeHtml(item.digit)}
+                  <b>${formatSigned(item.standardized_residual)}</b>
+                </span>`).join("")}
+            </div>
+          </article>`).join("")}
+      </div>
+    </div>`;
+}
+
+function renderAuditSourceLeaveOneOut(test) {
+  const sensitivity = test.parameters?.source_leave_one_out;
+  const rows = sensitivity?.excluded_sources || [];
+  if (!sensitivity || !rows.length) return "";
+  const statusLabels = {
+    available: "Đủ lát còn lại",
+    limited_comparison: "Có lát còn nhỏ",
+    insufficient_remaining_data: "Thiếu mẫu còn lại",
+    single_source: "Một nguồn chính",
+    missing_source_metadata: "Thiếu metadata nguồn",
+  };
+  const sampleLabels = {
+    usable: "Còn đủ mẫu",
+    too_small: "Còn mẫu nhỏ",
+  };
+  const strongest = sensitivity.strongest_effect_shift;
+  const strongestText = strongest
+    ? `Dịch chuyển mạnh nhất khi bỏ ${strongest.excluded_source_label || strongest.excluded_source_key}: Δw ${formatSigned(strongest.effect_size_delta, 4)}`
+    : "";
+  return `
+    <div class="position-source-sensitivity-panel" aria-label="Độ nhạy khi loại từng nguồn dữ liệu">
+      <div class="position-source-sensitivity-heading">
+        <div>
+          <span>Độ nhạy loại nguồn</span>
+          <strong>Bỏ một nguồn thì tín hiệu đổi bao nhiêu?</strong>
+        </div>
+        <p>${escapeHtml(sensitivity.interpretation || "")}</p>
+      </div>
+      <div class="position-source-sensitivity-status">
+        <span>${escapeHtml(statusLabels[sensitivity.status] || sensitivity.status)}</span>
+        <strong>${numberFormatter.format(sensitivity.eligible_source_count || 0)}/${numberFormatter.format(sensitivity.source_count || rows.length)} lát còn đủ mẫu</strong>
+        ${strongestText ? `<em>${escapeHtml(strongestText)}</em>` : ""}
+      </div>
+      <div class="position-source-sensitivity-grid">
+        ${rows.map((row) => `
+          <article class="${escapeHtml(row.sample_status || "unknown")}">
+            <header>
+              <span>${escapeHtml(sampleLabels[row.sample_status] || row.sample_status || "Không rõ")}</span>
+              <strong>Bỏ ${escapeHtml(row.excluded_source_label || row.excluded_source_key)}</strong>
+              <small>${renderSourceCounters(row.excluded_source_hosts)}</small>
+            </header>
+            <dl>
+              <div><dt>Nguồn bị loại</dt><dd>${numberFormatter.format(row.excluded_draws || 0)} kỳ</dd></div>
+              <div><dt>Còn lại</dt><dd>${numberFormatter.format(row.remaining_outcomes || 0)} kết quả</dd></div>
+              <div><dt>Δ độ lớn</dt><dd>${formatSigned(row.effect_size_delta || 0, 4)}</dd></div>
+              <div><dt>Δ χ²</dt><dd>${formatSigned(row.statistic_delta || 0, 3)}</dd></div>
+              <div><dt>Độ lớn còn lại</dt><dd>${formatDecimal(row.effect_size || 0, 4)}</dd></div>
+              <div><dt>|residual|max</dt><dd>${formatDecimal(row.max_abs_standardized_residual || 0, 3)}</dd></div>
+            </dl>
+            ${row.sample_note ? `<p>${escapeHtml(row.sample_note)}</p>` : ""}
+            <div class="position-source-sensitivity-residuals">
+              ${(row.top_residuals || []).map((item) => `
                 <span title="Vị trí ${item.position}, số ${item.digit}: quan sát ${numberFormatter.format(item.observed)}, kỳ vọng ${formatDecimal(item.expected, 1)}">
                   V${escapeHtml(item.position)}:${escapeHtml(item.digit)}
                   <b>${formatSigned(item.standardized_residual)}</b>

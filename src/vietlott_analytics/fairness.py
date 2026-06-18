@@ -20,6 +20,7 @@ DIGIT_PERIOD_MIN_DRAWS = 30
 DIGIT_PERIOD_TOP_RESIDUALS = 5
 DIGIT_SOURCE_MIN_DRAWS = 30
 DIGIT_SOURCE_TOP_RESIDUALS = 5
+DIGIT_SOURCE_LEAVE_ONE_OUT_TOP_RESIDUALS = 5
 
 SOURCE_LABELS = {
     "official_vietlott": "Vietlott chính thức",
@@ -601,6 +602,13 @@ def audit_log_events(product_reports: list[dict[str, Any]]) -> Iterator[dict[str
             )
             change_point_scan = test.get("parameters", {}).get("change_point_scan", {})
             strongest_change_point = change_point_scan.get("strongest_candidate", {})
+            source_leave_one_out = test.get("parameters", {}).get(
+                "source_leave_one_out",
+                {},
+            )
+            strongest_source_shift = (
+                source_leave_one_out.get("strongest_effect_shift") or {}
+            )
             yield {
                 "schema_version": 1,
                 "event_type": "fairness_audit_test",
@@ -653,6 +661,19 @@ def audit_log_events(product_reports: list[dict[str, Any]]) -> Iterator[dict[str
                 ),
                 "change_point_raw_p_value": change_point_scan.get("raw_p_value"),
                 "change_point_adjusted_p_value": change_point_scan.get("adjusted_p_value"),
+                "source_leave_one_out_status": source_leave_one_out.get("status"),
+                "source_leave_one_out_source_count": source_leave_one_out.get(
+                    "source_count"
+                ),
+                "source_leave_one_out_eligible_sources": source_leave_one_out.get(
+                    "eligible_source_count"
+                ),
+                "source_leave_one_out_strongest_source": strongest_source_shift.get(
+                    "excluded_source_key"
+                ),
+                "source_leave_one_out_strongest_effect_delta": strongest_source_shift.get(
+                    "effect_size_delta"
+                ),
                 "statistically_notable": test.get("statistically_notable"),
                 "practically_large": test.get("practically_large"),
                 "interpretation": test["interpretation"],
@@ -1774,6 +1795,7 @@ def _digit_position_test(
             "tier_breakdown": _digit_tier_breakdown(dataset, symbols),
             "period_breakdown": _digit_period_breakdown(dataset, symbols),
             "source_breakdown": _digit_source_breakdown(dataset, symbols),
+            "source_leave_one_out": _digit_source_leave_one_out(dataset, symbols),
             "residual_note": (
                 "Residual được công bố để giải thích đóng góp vào kiểm định tổng. "
                 "Không dùng từng ô như một kiểm định độc lập mới."
@@ -2046,12 +2068,10 @@ def _digit_period_row(
     }
 
 
-def _digit_source_breakdown(
+def _digit_source_groups(
     dataset: ProductDataset,
-    symbols: list[int],
-) -> dict[str, Any]:
-    product = dataset.product
-    length = product.sequence_length or 0
+    length: int,
+) -> dict[str, dict[str, Any]]:
     groups: dict[str, dict[str, Any]] = {}
     for observation in dataset.observations:
         outcomes = [
@@ -2078,6 +2098,262 @@ def _digit_source_breakdown(
         group["source_origins"][observation.source_origin or "unknown"] += 1
         group["source_verification"][observation.source_verification or "unknown"] += 1
 
+    return groups
+
+
+def _digit_position_profile(
+    outcomes: list[str],
+    symbols: list[int],
+    length: int,
+    *,
+    top_residual_limit: int,
+) -> dict[str, Any]:
+    if not outcomes or not symbols or length <= 0:
+        return {
+            "expected_per_position_digit": None,
+            "statistic": 0.0,
+            "effect_size": 0.0,
+            "max_abs_standardized_residual": 0.0,
+            "top_residuals": [],
+        }
+
+    position_counts = [Counter() for _ in range(length)]
+    for outcome in outcomes:
+        for position, char in enumerate(outcome):
+            position_counts[position][int(char)] += 1
+    expected = len(outcomes) / len(symbols)
+    residuals = []
+    raw_statistic = 0.0
+    for position, counter in enumerate(position_counts):
+        for digit in symbols:
+            contribution = (
+                ((counter[digit] - expected) ** 2) / expected if expected > 0 else 0.0
+            )
+            raw_statistic += contribution
+            residuals.append(
+                {
+                    "position": position + 1,
+                    "digit": digit,
+                    "observed": counter[digit],
+                    "expected": _round(expected),
+                    "standardized_residual": _round(
+                        (counter[digit] - expected) / math.sqrt(expected)
+                        if expected > 0
+                        else 0.0
+                    ),
+                    "chi_square_contribution": _round(contribution),
+                }
+            )
+    max_abs_residual = max(
+        (abs(float(item["standardized_residual"])) for item in residuals),
+        default=0.0,
+    )
+    top_residuals = sorted(
+        residuals,
+        key=lambda item: abs(float(item["standardized_residual"])),
+        reverse=True,
+    )[:top_residual_limit]
+    return {
+        "expected_per_position_digit": _round(expected),
+        "statistic": _round(raw_statistic),
+        "effect_size": _round(
+            math.sqrt(raw_statistic / (len(outcomes) * length))
+            if outcomes and length
+            else 0.0
+        ),
+        "max_abs_standardized_residual": _round(max_abs_residual),
+        "top_residuals": top_residuals,
+    }
+
+
+def _digit_source_leave_one_out(
+    dataset: ProductDataset,
+    symbols: list[int],
+) -> dict[str, Any]:
+    product = dataset.product
+    length = product.sequence_length or 0
+    groups = _digit_source_groups(dataset, length)
+    if not groups:
+        return {
+            "status": "missing_source_metadata",
+            "basis": "attributes_json.data_source with source_url host fallback",
+            "method": "source_leave_one_out",
+            "min_source_draws": DIGIT_SOURCE_MIN_DRAWS,
+            "source_count": 0,
+            "eligible_source_count": 0,
+            "baseline": None,
+            "excluded_sources": [],
+            "no_new_p_values": True,
+            "interpretation": (
+                "Không có outcome dùng được để chạy độ nhạy khi loại từng nguồn."
+            ),
+        }
+
+    baseline_outcomes = [
+        outcome
+        for group in groups.values()
+        for outcome in group["outcomes"]
+    ]
+    baseline = _digit_position_profile(
+        baseline_outcomes,
+        symbols,
+        length,
+        top_residual_limit=DIGIT_SOURCE_LEAVE_ONE_OUT_TOP_RESIDUALS,
+    )
+    baseline_draws = sum(len(group["observations"]) for group in groups.values())
+    baseline_summary = {
+        "draws": baseline_draws,
+        "outcomes": len(baseline_outcomes),
+        "statistic": baseline["statistic"],
+        "effect_size": baseline["effect_size"],
+        "max_abs_standardized_residual": baseline["max_abs_standardized_residual"],
+    }
+    if len(groups) == 1:
+        return {
+            "status": "single_source",
+            "basis": "attributes_json.data_source with source_url host fallback",
+            "method": "source_leave_one_out",
+            "min_source_draws": DIGIT_SOURCE_MIN_DRAWS,
+            "source_count": 1,
+            "eligible_source_count": 0,
+            "baseline": baseline_summary,
+            "excluded_sources": [],
+            "strongest_effect_shift": None,
+            "no_new_p_values": True,
+            "interpretation": (
+                "Chỉ có một nguồn có outcome dùng được, nên không thể loại một nguồn "
+                "mà vẫn còn lát dữ liệu đối chứng."
+            ),
+        }
+
+    rows = [
+        _digit_source_leave_one_out_row(
+            source_key=source_key,
+            group=group,
+            groups=groups,
+            baseline=baseline,
+            symbols=symbols,
+            length=length,
+        )
+        for source_key, group in groups.items()
+    ]
+    rows.sort(
+        key=lambda item: (
+            -abs(float(item["effect_size_delta"] or 0.0)),
+            -int(item["excluded_outcomes"]),
+            str(item["excluded_source_key"]),
+        )
+    )
+    eligible_rows = [item for item in rows if item["sample_status"] == "usable"]
+    if not eligible_rows:
+        status = "insufficient_remaining_data"
+    elif len(eligible_rows) < len(rows):
+        status = "limited_comparison"
+    else:
+        status = "available"
+    strongest_row = eligible_rows[0] if eligible_rows else rows[0]
+    strongest_effect_shift = {
+        "excluded_source_key": strongest_row["excluded_source_key"],
+        "excluded_source_label": strongest_row["excluded_source_label"],
+        "sample_status": strongest_row["sample_status"],
+        "remaining_draws": strongest_row["remaining_draws"],
+        "remaining_outcomes": strongest_row["remaining_outcomes"],
+        "statistic_delta": strongest_row["statistic_delta"],
+        "effect_size_delta": strongest_row["effect_size_delta"],
+        "relative_effect_shift": strongest_row["relative_effect_shift"],
+    }
+    return {
+        "status": status,
+        "basis": "attributes_json.data_source with source_url host fallback",
+        "method": "source_leave_one_out",
+        "min_source_draws": DIGIT_SOURCE_MIN_DRAWS,
+        "source_count": len(groups),
+        "eligible_source_count": len(eligible_rows),
+        "baseline": baseline_summary,
+        "excluded_sources": rows,
+        "strongest_effect_shift": strongest_effect_shift,
+        "no_new_p_values": True,
+        "interpretation": (
+            "Loại từng nguồn rồi tính lại thống kê và độ lớn hiệu ứng để xem kết luận "
+            "mô tả có phụ thuộc quá mạnh vào một parser, mirror hoặc vùng provenance hay không. "
+            "Bảng này không sinh p-value, q-value hoặc trạng thái mới."
+        ),
+    }
+
+
+def _digit_source_leave_one_out_row(
+    *,
+    source_key: str,
+    group: dict[str, Any],
+    groups: dict[str, dict[str, Any]],
+    baseline: dict[str, Any],
+    symbols: list[int],
+    length: int,
+) -> dict[str, Any]:
+    remaining_observations = [
+        observation
+        for other_key, other_group in groups.items()
+        if other_key != source_key
+        for observation in other_group["observations"]
+    ]
+    remaining_outcomes = [
+        outcome
+        for other_key, other_group in groups.items()
+        if other_key != source_key
+        for outcome in other_group["outcomes"]
+    ]
+    profile = _digit_position_profile(
+        remaining_outcomes,
+        symbols,
+        length,
+        top_residual_limit=DIGIT_SOURCE_LEAVE_ONE_OUT_TOP_RESIDUALS,
+    )
+    baseline_statistic = float(baseline["statistic"] or 0.0)
+    baseline_effect = float(baseline["effect_size"] or 0.0)
+    statistic_delta = float(profile["statistic"] or 0.0) - baseline_statistic
+    effect_delta = float(profile["effect_size"] or 0.0) - baseline_effect
+    sample_status = (
+        "usable"
+        if len(remaining_observations) >= DIGIT_SOURCE_MIN_DRAWS
+        and len(remaining_outcomes) > 0
+        else "too_small"
+    )
+    return {
+        "excluded_source_key": source_key,
+        "excluded_source_label": SOURCE_LABELS.get(source_key, source_key.replace("_", " ")),
+        "excluded_draws": len(group["observations"]),
+        "excluded_outcomes": len(group["outcomes"]),
+        "excluded_source_hosts": _counter_rows(group["source_hosts"]),
+        "excluded_source_origins": _counter_rows(group["source_origins"]),
+        "excluded_source_verification": _counter_rows(group["source_verification"]),
+        "remaining_draws": len(remaining_observations),
+        "remaining_outcomes": len(remaining_outcomes),
+        "sample_status": sample_status,
+        "expected_per_position_digit": profile["expected_per_position_digit"],
+        "statistic": profile["statistic"],
+        "statistic_delta": _round(statistic_delta),
+        "effect_size": profile["effect_size"],
+        "effect_size_delta": _round(effect_delta),
+        "relative_effect_shift": _round(effect_delta / baseline_effect)
+        if baseline_effect
+        else None,
+        "max_abs_standardized_residual": profile["max_abs_standardized_residual"],
+        "top_residuals": profile["top_residuals"],
+        "sample_note": (
+            "Phần còn lại chưa đủ kỳ tối thiểu nên dòng này chỉ dùng để rà provenance."
+            if sample_status == "too_small"
+            else ""
+        ),
+    }
+
+
+def _digit_source_breakdown(
+    dataset: ProductDataset,
+    symbols: list[int],
+) -> dict[str, Any]:
+    product = dataset.product
+    length = product.sequence_length or 0
+    groups = _digit_source_groups(dataset, length)
     if not groups:
         return {
             "status": "missing_source_metadata",

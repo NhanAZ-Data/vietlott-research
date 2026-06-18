@@ -26,6 +26,9 @@ backtest hoặc cách đọc website. Thay đổi giao diện thuần túy khôn
   `raw_p_value` chỉ là trường giải thích ứng viên mạnh nhất
 - Thay skip đồng xuất hiện Keno bằng `dense_pair_index_vector`, đếm đầy đủ 3.160
   cặp hợp lệ trên toàn bộ lịch sử và công bố `no_sampling = true`
+- Thêm `parameters.source_leave_one_out` cho `digit_position_chi_square`, loại
+  từng nguồn dữ liệu rồi tính lại chi-square và độ lớn hiệu ứng để đọc độ nhạy
+  provenance; bảng này không tạo p-value, q-value hoặc status mới
 
 ## 15/06/2026
 
