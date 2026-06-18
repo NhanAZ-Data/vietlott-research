@@ -23,6 +23,7 @@ def test_research_documentation_and_issue_templates_exist() -> None:
         ROOT / "docs" / "BACKTEST_TARGET_SCOPE.md",
         ROOT / "docs" / "BACKTEST_SCORE_FORMULAS.md",
         ROOT / "docs" / "BACKTEST_PHASE_SPLIT.md",
+        ROOT / "docs" / "BACKTEST_MULTIPLE_TESTING.md",
         ROOT / "docs" / "METHODOLOGY_CHANGELOG.md",
         ROOT / "docs" / "templates" / "BAO_CAO_KET_QUA_AM.md",
         ROOT / "docs" / "DU_DOAN_BINGO18_0171884.md",
@@ -56,6 +57,7 @@ def test_readme_links_research_documents_without_em_dash() -> None:
     assert "docs/BACKTEST_TARGET_SCOPE.md" in readme
     assert "docs/BACKTEST_SCORE_FORMULAS.md" in readme
     assert "docs/BACKTEST_PHASE_SPLIT.md" in readme
+    assert "docs/BACKTEST_MULTIPLE_TESTING.md" in readme
     assert "docs/METHODOLOGY_CHANGELOG.md" in readme
     assert "docs/templates/BAO_CAO_KET_QUA_AM.md" in readme
     assert "docs/DU_DOAN_BINGO18_0171884.md" in readme
@@ -241,3 +243,16 @@ def test_backtest_phase_split_documentation_has_required_fields() -> None:
     assert "selection_result_used_to_choose_formulas" in document
     assert "target_scope" in document
     assert "phase_split_validation" in document
+
+
+def test_backtest_multiple_testing_documentation_has_required_fields() -> None:
+    document = (ROOT / "docs" / "BACKTEST_MULTIPLE_TESTING.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "multiple_testing_trials" in document
+    assert "published_trial_count" in document
+    assert "registered_parameter_variant_count" in document
+    assert "correction_trial_count" in document
+    assert "multiple_testing_scope" in document
+    assert "multiple_testing_registry_validation" in document

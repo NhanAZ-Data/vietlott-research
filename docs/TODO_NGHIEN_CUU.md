@@ -426,8 +426,17 @@ file để giữ lại dấu vết thay đổi.
   - Website hiển thị dòng "Tách chọn công thức và đánh giá cuối"; tài liệu hóa trong
     `docs/BACKTEST_PHASE_SPLIT.md` và khóa bằng unit test, documentation test,
     static-site test.
-- [ ] `BACKTEST-007` Hiệu chỉnh nhiều phép thử trên mọi chiến lược, sản phẩm và biến thể
+- [x] `BACKTEST-007` Hiệu chỉnh nhiều phép thử trên mọi chiến lược, sản phẩm và biến thể
   tham số đã thử, không chỉ các mô hình cuối được công bố.
+  - Hoàn thành ngày 18/06/2026.
+  - Mỗi report backtest có `multiple_testing_trials` gồm 3 mô hình công bố và 4 biến thể
+    tham số/shadow trial trên cùng `target_scope`.
+  - `finalize_backtests` chạy Benjamini-Hochberg trên toàn bộ registry trial, ghi
+    `correction_trial_count`, `multiple_testing_scope` và
+    `multiple_testing_registry_validation`.
+  - Website hiển thị "Registry hiệu chỉnh nhiều phép thử"; tài liệu hóa trong
+    `docs/BACKTEST_MULTIPLE_TESTING.md` và khóa bằng unit test, documentation test,
+    static-site test.
 - [ ] `BACKTEST-008` Lưu lại cả thử nghiệm thất bại và cấu hình bị loại.
 - [ ] `BACKTEST-009` Thêm kiểm tra độ nhạy theo độ dài cửa sổ 50, 200, 500 kỳ và
   các giá trị được đăng ký trước khác.

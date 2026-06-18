@@ -218,6 +218,9 @@ def _build_analysis_export(
                     "product_reports[*].backtest.baseline.partial_match_baseline"
                 ),
                 "phase_split_field": "product_reports[*].backtest.phase_split",
+                "multiple_testing_trial_field": (
+                    "product_reports[*].backtest.multiple_testing_trials"
+                ),
                 "score_units": {
                     "number_set": "main_number_hits_per_draw",
                     "digit_sequence": "best_position_matches_per_draw",
@@ -235,6 +238,10 @@ def _build_analysis_export(
                     "phase_split_validation",
                     {},
                 ),
+                "multiple_testing_registry_validation": manifest.get(
+                    "backtest_summary",
+                    {},
+                ).get("multiple_testing_registry_validation", {}),
                 "win_rule": "mean_difference > 0 and global_bh_q < 0.05",
                 "important_limitations": [
                     "Điểm backtest tập số hiện chỉ tính số chính, chưa tính số đặc biệt.",

@@ -53,6 +53,12 @@ backtest hoặc cách đọc website. Thay đổi giao diện thuần túy khôn
   `target_scope`, baseline và ba comparison công bố chỉ dùng phase đánh giá cuối
 - `manifest.backtest_summary.phase_split_validation` công bố trạng thái validate
   phase toàn hệ thống và bắt phase đánh giá cuối trùng `target_scope`
+- Thêm `backtest.multiple_testing_trials` và hiệu chỉnh Benjamini-Hochberg trên
+  cả mô hình công bố lẫn các biến thể tham số đã đăng ký/thử; `comparison_count`
+  vẫn là số comparison công bố, còn `correction_trial_count` là scope correction
+  thật sự
+- `manifest.backtest_summary.multiple_testing_registry_validation` công bố trạng
+  thái validate registry và bắt q-value của comparison dùng scope trial rộng hơn
 
 ## 15/06/2026
 

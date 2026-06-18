@@ -20,7 +20,7 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert 'id="phan-tich"' in index
     assert 'id="du-doan"' in index
     assert 'id="kiem-dinh"' in index
-    assert "assets/app.js?v=20260618-8" in index
+    assert "assets/app.js?v=20260618-9" in index
     assert "archive-summary-heading" in index
     assert "Sổ dự đoán toàn hệ thống" in index
     assert "assets/docs.js?v=20260618-2" in data_page
@@ -138,6 +138,8 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert "renderBacktestPartialBaseline" in app_script
     assert "renderBacktestPhaseSplit" in app_script
     assert "Tách chọn công thức và đánh giá cuối" in app_script
+    assert "renderBacktestMultipleTestingScope" in app_script
+    assert "Registry hiệu chỉnh nhiều phép thử" in app_script
     assert "Baseline trùng một phần" in app_script
     assert "Thước đo riêng" in app_script
     assert "Ba chiến lược ứng viên" in method_page
@@ -204,6 +206,17 @@ def test_generated_site_data_matches_manifest() -> None:
     assert manifest["analysis_export"]["path"] == "data/analysis-export.json"
     assert manifest["backtest_summary"]["multiple_testing_method"] == "benjamini_hochberg"
     assert manifest["backtest_summary"]["comparison_count"] == 24
+    assert manifest["backtest_summary"]["correction_trial_count"] > manifest[
+        "backtest_summary"
+    ]["comparison_count"]
+    registry_validation = manifest["backtest_summary"][
+        "multiple_testing_registry_validation"
+    ]
+    assert registry_validation["status"] == "validated"
+    assert registry_validation["published_comparison_count"] == 24
+    assert registry_validation["correction_trial_count"] == manifest[
+        "backtest_summary"
+    ]["correction_trial_count"]
     target_scope_validation = manifest["backtest_summary"]["target_scope_validation"]
     assert target_scope_validation["status"] == "validated"
     assert target_scope_validation["product_count"] == len(manifest["products"])
@@ -407,6 +420,19 @@ def test_generated_site_data_matches_manifest() -> None:
                 )
         assert report["backtest"]["recent_model"]["strategy"] == "recent_frequency"
         assert "recent_comparison" in report["backtest"]
+        trial_registry = report["backtest"]["multiple_testing_trials"]
+        assert trial_registry["trial_count"] == 7
+        assert trial_registry["published_trial_count"] == 3
+        assert trial_registry["registered_parameter_variant_count"] == 4
+        assert {
+            row["published_comparison_key"]
+            for row in trial_registry["trials"]
+            if row["published"]
+        } == {"comparison", "recent_comparison", "audit_comparison"}
+        for key in ("comparison", "recent_comparison", "audit_comparison"):
+            assert report["backtest"][key]["multiple_testing_scope"] == manifest[
+                "backtest_summary"
+            ]["correction_trial_count"]
         formulas = report["backtest"]["score_formulas"]
         assert formulas["product_kind"] == product["kind"]
         assert formulas["per_draw_score"]

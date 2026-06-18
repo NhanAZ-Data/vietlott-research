@@ -47,6 +47,74 @@ BACKTEST_SCOPE_STRATEGIES = (
     "uniform_exact_expectation",
 )
 BACKTEST_SELECTION_PHASE_FRACTION = 0.5
+BACKTEST_NUMBER_SHADOW_TRIALS = (
+    {
+        "trial_id": "short_frequency_only",
+        "strategy": "short_frequency",
+        "label": "Tần suất cửa sổ ngắn",
+        "score_key": "short_z",
+        "variant_role": "registered_parameter_variant",
+        "parameters": {"score_policy": "short_z_only", "short_window_draws": 50},
+    },
+    {
+        "trial_id": "long_frequency_only",
+        "strategy": "long_frequency",
+        "label": "Tần suất toàn lịch sử",
+        "score_key": "long_z",
+        "variant_role": "registered_parameter_variant",
+        "parameters": {"score_policy": "long_z_only"},
+    },
+    {
+        "trial_id": "balanced_without_overdue",
+        "strategy": "balanced_signal",
+        "label": "Cân bằng không dùng độ vắng",
+        "score_key": "balanced_no_overdue",
+        "variant_role": "registered_parameter_variant",
+        "parameters": {"score_policy": "balanced_without_overdue_ratio"},
+    },
+    {
+        "trial_id": "audit_without_pair_greedy",
+        "strategy": "audit_signal",
+        "label": "Audit không thưởng cặp tham lam",
+        "score_key": "audit",
+        "variant_role": "registered_parameter_variant",
+        "parameters": {"score_policy": "audit_score_without_selected_pair_bonus"},
+    },
+)
+BACKTEST_DIGIT_SHADOW_TRIALS = (
+    {
+        "trial_id": "short_frequency_only",
+        "strategy": "short_frequency",
+        "label": "Tần suất cửa sổ ngắn",
+        "score_strategy": "short",
+        "variant_role": "registered_parameter_variant",
+        "parameters": {"score_policy": "short_z_only", "short_window_draws": 50},
+    },
+    {
+        "trial_id": "long_frequency_only",
+        "strategy": "long_frequency",
+        "label": "Tần suất toàn lịch sử",
+        "score_strategy": "long",
+        "variant_role": "registered_parameter_variant",
+        "parameters": {"score_policy": "long_z_only"},
+    },
+    {
+        "trial_id": "balanced_without_long_penalty",
+        "strategy": "balanced_signal",
+        "label": "Cân bằng không trừ tín hiệu dài",
+        "score_strategy": "balanced_no_long_penalty",
+        "variant_role": "registered_parameter_variant",
+        "parameters": {"score_policy": "balanced_without_long_penalty"},
+    },
+    {
+        "trial_id": "audit_unclipped",
+        "strategy": "audit_signal",
+        "label": "Audit không chặn z-score",
+        "score_strategy": "audit_unclipped",
+        "variant_role": "registered_parameter_variant",
+        "parameters": {"score_policy": "audit_unclipped_z_scores"},
+    },
+)
 
 
 @dataclass(slots=True)
@@ -358,9 +426,11 @@ def build_backtest_report(dataset: ProductDataset) -> dict[str, object]:
 
 
 def finalize_backtests(product_reports: list[dict[str, Any]]) -> dict[str, Any]:
-    comparisons: list[tuple[dict[str, Any], str]] = []
+    correction_trials: list[tuple[dict[str, Any], str, dict[str, Any] | None]] = []
+    published_comparison_count = 0
     target_scopes: list[dict[str, Any]] = []
     phase_splits: list[dict[str, Any]] = []
+    trial_registries: list[dict[str, Any]] = []
     completed_products = 0
     for report in product_reports:
         backtest = report.get("backtest")
@@ -368,6 +438,7 @@ def finalize_backtests(product_reports: list[dict[str, Any]]) -> dict[str, Any]:
             continue
         _validate_backtest_target_scope(backtest)
         _validate_backtest_phase_split(backtest)
+        _validate_backtest_multiple_testing_trials(backtest)
         completed_products += 1
         product_slug = str(report["product"]["slug"])
         target_scope = backtest.get("target_scope")
@@ -384,6 +455,41 @@ def finalize_backtests(product_reports: list[dict[str, Any]]) -> dict[str, Any]:
                     ),
                 }
             )
+        registry = backtest.get("multiple_testing_trials", {})
+        trials = registry.get("trials", []) if isinstance(registry, dict) else []
+        trial_registries.append(
+            {
+                "product": product_slug,
+                "method": registry.get("method") if isinstance(registry, dict) else None,
+                "trial_count": registry.get("trial_count") if isinstance(registry, dict) else None,
+                "published_trial_count": registry.get("published_trial_count")
+                if isinstance(registry, dict)
+                else None,
+                "registered_parameter_variant_count": registry.get(
+                    "registered_parameter_variant_count"
+                )
+                if isinstance(registry, dict)
+                else None,
+                "target_scope_id": target_scope.get("scope_id")
+                if isinstance(target_scope, dict)
+                else None,
+            }
+        )
+        for trial in trials:
+            if not isinstance(trial, dict) or not isinstance(
+                trial.get("approximate_p_value"),
+                (int, float),
+            ):
+                continue
+            comparison = None
+            if trial.get("published"):
+                key = str(trial.get("published_comparison_key"))
+                comparison = backtest.get(key)
+                if isinstance(comparison, dict):
+                    published_comparison_count += 1
+                else:
+                    comparison = None
+            correction_trials.append((trial, product_slug, comparison))
         phase_split = backtest.get("phase_split")
         if isinstance(phase_split, dict):
             selection_phase = phase_split.get("selection_phase", {})
@@ -407,47 +513,67 @@ def finalize_backtests(product_reports: list[dict[str, Any]]) -> dict[str, Any]:
                     ),
                 }
             )
-        for key in ("comparison", "recent_comparison", "audit_comparison"):
-            comparison = backtest.get(key)
-            if isinstance(comparison, dict) and isinstance(
-                comparison.get("approximate_p_value"),
-                (int, float),
-            ):
-                comparisons.append((comparison, product_slug))
 
     q_values = _benjamini_hochberg(
-        [float(comparison["approximate_p_value"]) for comparison, _ in comparisons]
+        [float(trial["approximate_p_value"]) for trial, _, _ in correction_trials]
     )
     adjusted_wins = 0
     unadjusted_wins = 0
     products_with_adjusted_win: set[str] = set()
     products_with_unadjusted_win: set[str] = set()
-    for (comparison, product_slug), q_value in zip(comparisons, q_values, strict=True):
-        difference = _comparison_difference(comparison)
-        unadjusted = difference > 0 and float(comparison["approximate_p_value"]) < 0.05
+    for (trial, product_slug, comparison), q_value in zip(
+        correction_trials,
+        q_values,
+        strict=True,
+    ):
+        difference = _comparison_difference(trial)
+        unadjusted = difference > 0 and float(trial["approximate_p_value"]) < 0.05
         adjusted = difference > 0 and q_value < BACKTEST_MULTIPLE_TESTING_ALPHA
-        comparison["q_value_global_bh"] = _round(q_value, 8)
-        comparison["beats_baseline_unadjusted"] = unadjusted
-        comparison["beats_baseline"] = adjusted
-        comparison["multiple_testing_method"] = "benjamini_hochberg"
-        comparison["multiple_testing_scope"] = len(comparisons)
-        unadjusted_wins += int(unadjusted)
-        adjusted_wins += int(adjusted)
-        if unadjusted:
-            products_with_unadjusted_win.add(product_slug)
-        if adjusted:
-            products_with_adjusted_win.add(product_slug)
+        trial["q_value_global_bh"] = _round(q_value, 8)
+        trial["beats_baseline_unadjusted"] = unadjusted
+        trial["beats_baseline"] = adjusted
+        trial["multiple_testing_method"] = "benjamini_hochberg"
+        trial["multiple_testing_scope"] = len(correction_trials)
+        if comparison is not None:
+            comparison["q_value_global_bh"] = _round(q_value, 8)
+            comparison["beats_baseline_unadjusted"] = unadjusted
+            comparison["beats_baseline"] = adjusted
+            comparison["multiple_testing_method"] = "benjamini_hochberg"
+            comparison["multiple_testing_scope"] = len(correction_trials)
+            comparison["multiple_testing_trial_id"] = trial.get("trial_id")
+            unadjusted_wins += int(unadjusted)
+            adjusted_wins += int(adjusted)
+            if unadjusted:
+                products_with_unadjusted_win.add(product_slug)
+            if adjusted:
+                products_with_adjusted_win.add(product_slug)
 
     return {
         "schema_version": 1,
-        "comparison_count": len(comparisons),
+        "comparison_count": published_comparison_count,
+        "correction_trial_count": len(correction_trials),
         "product_count": completed_products,
         "multiple_testing_method": "benjamini_hochberg",
+        "multiple_testing_scope_policy": (
+            "published_final_models_plus_registered_parameter_variants"
+        ),
         "alpha": BACKTEST_MULTIPLE_TESTING_ALPHA,
         "adjusted_winning_comparisons": adjusted_wins,
         "unadjusted_winning_comparisons": unadjusted_wins,
         "products_with_adjusted_win": sorted(products_with_adjusted_win),
         "products_with_unadjusted_win": sorted(products_with_unadjusted_win),
+        "multiple_testing_registry_validation": {
+            "status": "validated",
+            "method": "published_and_registered_trial_registry",
+            "product_count": len(trial_registries),
+            "published_comparison_count": published_comparison_count,
+            "correction_trial_count": len(correction_trials),
+            "products": trial_registries,
+            "interpretation": (
+                "Benjamini-Hochberg dùng toàn bộ trial đã đăng ký trong "
+                "multiple_testing_trials, gồm mô hình công bố và biến thể tham số."
+            ),
+        },
         "target_scope_validation": {
             "status": "validated",
             "method": "shared_target_scope_id_per_product",
@@ -578,6 +704,56 @@ def _target_scope_fields(target_scope: dict[str, Any]) -> dict[str, Any]:
     return {
         "target_scope_id": target_scope["scope_id"],
         "target_draw_count": target_scope["target_draw_count"],
+    }
+
+
+def _backtest_trial_row(
+    *,
+    trial_id: str,
+    strategy: str,
+    label: str,
+    variant_role: str,
+    differences: list[float],
+    metric_key: str,
+    scope_fields: dict[str, Any],
+    parameters: dict[str, Any],
+    published_comparison_key: str | None = None,
+) -> dict[str, Any]:
+    z_score, p_value = _paired_normal_test(differences)
+    return {
+        "trial_id": trial_id,
+        "strategy": strategy,
+        "label": label,
+        "variant_role": variant_role,
+        "published": published_comparison_key is not None,
+        "published_comparison_key": published_comparison_key,
+        **scope_fields,
+        metric_key: _round(fmean(differences)),
+        "paired_z_score": _round(z_score),
+        "approximate_p_value": _round(p_value, 8),
+        **_normal_mean_interval(differences),
+        "parameters": parameters,
+    }
+
+
+def _backtest_multiple_testing_trials(
+    product_kind: str,
+    metric_key: str,
+    trials: list[dict[str, Any]],
+) -> dict[str, Any]:
+    published_count = sum(bool(row.get("published")) for row in trials)
+    return {
+        "schema_version": 1,
+        "method": "benjamini_hochberg_over_published_and_registered_trials",
+        "scope_policy": (
+            "published_final_models_plus_registered_parameter_variants"
+        ),
+        "product_kind": product_kind,
+        "comparison_metric": metric_key,
+        "trial_count": len(trials),
+        "published_trial_count": published_count,
+        "registered_parameter_variant_count": len(trials) - published_count,
+        "trials": trials,
     }
 
 
@@ -764,6 +940,48 @@ def _validate_backtest_phase_split(backtest: dict[str, Any]) -> None:
         raise ValueError("Backtest selection phase must not choose final formulas")
     if phase_split.get("final_evaluation_feedback_used_for_model_selection") is not False:
         raise ValueError("Backtest final evaluation feedback must not choose formulas")
+
+
+def _validate_backtest_multiple_testing_trials(backtest: dict[str, Any]) -> None:
+    registry = backtest.get("multiple_testing_trials")
+    target_scope = backtest.get("target_scope")
+    if not isinstance(registry, dict):
+        raise ValueError("Backtest multiple_testing_trials missing")
+    if not isinstance(target_scope, dict):
+        raise ValueError("Backtest target_scope missing")
+    trials = registry.get("trials")
+    if not isinstance(trials, list) or not trials:
+        raise ValueError("Backtest multiple_testing_trials empty")
+    if registry.get("trial_count") != len(trials):
+        raise ValueError("Backtest multiple_testing_trials trial_count mismatch")
+    expected_scope_id = target_scope.get("scope_id")
+    expected_count = target_scope.get("target_draw_count")
+    published_keys: set[str] = set()
+    for trial in trials:
+        if not isinstance(trial, dict):
+            raise ValueError("Backtest multiple_testing_trials row invalid")
+        if trial.get("target_scope_id") != expected_scope_id:
+            raise ValueError("Backtest multiple_testing_trials target_scope_id mismatch")
+        if trial.get("target_draw_count") != expected_count:
+            raise ValueError("Backtest multiple_testing_trials target_draw_count mismatch")
+        if not isinstance(trial.get("approximate_p_value"), (int, float)):
+            raise ValueError("Backtest multiple_testing_trials p-value missing")
+        if trial.get("published"):
+            key = trial.get("published_comparison_key")
+            if not isinstance(key, str) or not isinstance(backtest.get(key), dict):
+                raise ValueError("Backtest multiple_testing_trials published key invalid")
+            published_keys.add(key)
+            if backtest[key].get("approximate_p_value") != trial.get("approximate_p_value"):
+                raise ValueError("Backtest multiple_testing_trials published p-value mismatch")
+    present_comparison_keys = {
+        key for key in BACKTEST_COMPARISON_KEYS if isinstance(backtest.get(key), dict)
+    }
+    if not present_comparison_keys.issubset(published_keys):
+        raise ValueError("Backtest multiple_testing_trials missing published comparison")
+    if registry.get("published_trial_count") != len(published_keys):
+        raise ValueError("Backtest multiple_testing_trials published count mismatch")
+    if registry.get("registered_parameter_variant_count") != len(trials) - len(published_keys):
+        raise ValueError("Backtest multiple_testing_trials variant count mismatch")
 
 
 def _forecast_events(dataset: ProductDataset) -> list[dict[str, Any]]:
@@ -1021,6 +1239,10 @@ def _number_backtest(dataset: ProductDataset) -> dict[str, object]:
     differences: list[float] = []
     recent_differences: list[float] = []
     audit_differences: list[float] = []
+    shadow_differences: dict[str, list[float]] = {
+        str(trial["trial_id"]): []
+        for trial in BACKTEST_NUMBER_SHADOW_TRIALS
+    }
     expected_hits = (product.pick_count or 0) ** 2 / product.pool_size
     for index in range(start, len(observations)):
         target = observations[index]
@@ -1065,6 +1287,17 @@ def _number_backtest(dataset: ProductDataset) -> dict[str, object]:
         differences.append(float(model_hit - expected_hits))
         recent_differences.append(float(recent_hit - expected_hits))
         audit_differences.append(float(audit_hit - expected_hits))
+        for trial in BACKTEST_NUMBER_SHADOW_TRIALS:
+            trial_id = str(trial["trial_id"])
+            trial_model = _top_numbers(
+                scores,
+                str(trial["score_key"]),
+                product.pick_count or 0,
+                seed + f"|{trial_id}",
+            )
+            shadow_differences[trial_id].append(
+                float(len(actual.intersection(trial_model)) - expected_hits)
+            )
 
         total_counts.update(target.values)
         for value in target.values:
@@ -1116,6 +1349,60 @@ def _number_backtest(dataset: ProductDataset) -> dict[str, object]:
         fmean(evaluation_recent_differences) > 0 and recent_p_value < 0.05
     )
     audit_comparison_wins = fmean(evaluation_audit_differences) > 0 and audit_p_value < 0.05
+    multiple_testing_trials = _backtest_multiple_testing_trials(
+        "number_set",
+        "mean_hit_difference",
+        [
+            _backtest_trial_row(
+                trial_id="balanced_signal:published_final",
+                strategy="balanced_signal",
+                label="Kết hợp ba dấu hiệu",
+                variant_role="published_final_model",
+                differences=evaluation_differences,
+                metric_key="mean_hit_difference",
+                scope_fields=scope_fields,
+                parameters={"score_policy": NUMBER_SCORE_POLICY},
+                published_comparison_key="comparison",
+            ),
+            _backtest_trial_row(
+                trial_id="recent_frequency:published_final",
+                strategy="recent_frequency",
+                label="Tần suất cửa sổ gần",
+                variant_role="published_final_model",
+                differences=evaluation_recent_differences,
+                metric_key="mean_hit_difference",
+                scope_fields=scope_fields,
+                parameters={"score_policy": "0.6*short_z+0.4*recent_z"},
+                published_comparison_key="recent_comparison",
+            ),
+            _backtest_trial_row(
+                trial_id="audit_signal:published_final",
+                strategy="audit_signal",
+                label="Tín hiệu kiểm định công bằng",
+                variant_role="published_final_model",
+                differences=evaluation_audit_differences,
+                metric_key="mean_hit_difference",
+                scope_fields=scope_fields,
+                parameters={"score_policy": AUDIT_NUMBER_SCORE_POLICY},
+                published_comparison_key="audit_comparison",
+            ),
+            *[
+                _backtest_trial_row(
+                    trial_id=f"{trial['strategy']}:{trial['trial_id']}",
+                    strategy=str(trial["strategy"]),
+                    label=str(trial["label"]),
+                    variant_role=str(trial["variant_role"]),
+                    differences=shadow_differences[str(trial["trial_id"])][
+                        evaluation_start_offset:
+                    ],
+                    metric_key="mean_hit_difference",
+                    scope_fields=scope_fields,
+                    parameters=dict(trial["parameters"]),
+                )
+                for trial in BACKTEST_NUMBER_SHADOW_TRIALS
+            ],
+        ],
+    )
     report = {
         "schema_version": 2,
         "status": "complete",
@@ -1124,6 +1411,7 @@ def _number_backtest(dataset: ProductDataset) -> dict[str, object]:
         "walk_forward_samples": len(model_hits),
         "target_scope": target_scope,
         "phase_split": phase_split,
+        "multiple_testing_trials": multiple_testing_trials,
         "score_formulas": _number_backtest_score_formulas(),
         "first_walk_forward_draw_id": observations[start].draw_id,
         "first_test_draw_id": observations[evaluation_start_index].draw_id,
@@ -1202,6 +1490,8 @@ def _number_backtest(dataset: ProductDataset) -> dict[str, object]:
         ),
     }
     _validate_backtest_target_scope(report)
+    _validate_backtest_phase_split(report)
+    _validate_backtest_multiple_testing_trials(report)
     return report
 
 
@@ -1250,6 +1540,10 @@ def _digit_backtest(dataset: ProductDataset) -> dict[str, object]:
     baseline_best_expected: list[float] = []
     baseline_exact_expected: list[float] = []
     baseline_score_distributions: list[dict[int, float]] = []
+    shadow_differences: dict[str, list[float]] = {
+        str(trial["trial_id"]): []
+        for trial in BACKTEST_DIGIT_SHADOW_TRIALS
+    }
     for index in range(start, len(observations)):
         target = observations[index]
         seed = f"backtest|{product.slug}|{target.draw_id}|{MODEL_VERSION}"
@@ -1285,6 +1579,19 @@ def _digit_backtest(dataset: ProductDataset) -> dict[str, object]:
         baseline_best_expected.append(expected_best_match)
         baseline_exact_expected.append(expected_exact_probability)
         baseline_score_distributions.append(expected_score_distribution)
+        for trial in BACKTEST_DIGIT_SHADOW_TRIALS:
+            trial_id = str(trial["trial_id"])
+            trial_model = _digit_sequence_from_scores(
+                total,
+                recent,
+                short,
+                symbols,
+                str(trial["score_strategy"]),
+                seed + f"|{trial_id}",
+            )
+            shadow_differences[trial_id].append(
+                float(_best_position_match(trial_model, actual) - expected_best_match)
+            )
 
         _update_digit_counts(total, target.outcomes, 1)
         recent_items.append(target)
@@ -1347,6 +1654,60 @@ def _digit_backtest(dataset: ProductDataset) -> dict[str, object]:
         fmean(recent_differences) > 0 and recent_p_value < 0.05
     )
     audit_comparison_wins = fmean(audit_differences) > 0 and audit_p_value < 0.05
+    multiple_testing_trials = _backtest_multiple_testing_trials(
+        "digit_sequence",
+        "mean_position_match_difference",
+        [
+            _backtest_trial_row(
+                trial_id="balanced_signal:published_final",
+                strategy="balanced_signal",
+                label="Kết hợp ba dấu hiệu",
+                variant_role="published_final_model",
+                differences=differences,
+                metric_key="mean_position_match_difference",
+                scope_fields=scope_fields,
+                parameters={"score_policy": DIGIT_SCORE_POLICY},
+                published_comparison_key="comparison",
+            ),
+            _backtest_trial_row(
+                trial_id="recent_frequency:published_final",
+                strategy="recent_frequency",
+                label="Tần suất cửa sổ gần",
+                variant_role="published_final_model",
+                differences=recent_differences,
+                metric_key="mean_position_match_difference",
+                scope_fields=scope_fields,
+                parameters={"score_policy": "0.6*short_z+0.4*recent_z"},
+                published_comparison_key="recent_comparison",
+            ),
+            _backtest_trial_row(
+                trial_id="audit_signal:published_final",
+                strategy="audit_signal",
+                label="Tín hiệu kiểm định công bằng",
+                variant_role="published_final_model",
+                differences=audit_differences,
+                metric_key="mean_position_match_difference",
+                scope_fields=scope_fields,
+                parameters={"score_policy": AUDIT_DIGIT_SCORE_POLICY},
+                published_comparison_key="audit_comparison",
+            ),
+            *[
+                _backtest_trial_row(
+                    trial_id=f"{trial['strategy']}:{trial['trial_id']}",
+                    strategy=str(trial["strategy"]),
+                    label=str(trial["label"]),
+                    variant_role=str(trial["variant_role"]),
+                    differences=shadow_differences[str(trial["trial_id"])][
+                        evaluation_start_offset:
+                    ],
+                    metric_key="mean_position_match_difference",
+                    scope_fields=scope_fields,
+                    parameters=dict(trial["parameters"]),
+                )
+                for trial in BACKTEST_DIGIT_SHADOW_TRIALS
+            ],
+        ],
+    )
     report = {
         "schema_version": 2,
         "status": "complete",
@@ -1355,6 +1716,7 @@ def _digit_backtest(dataset: ProductDataset) -> dict[str, object]:
         "walk_forward_samples": len(model_best),
         "target_scope": target_scope,
         "phase_split": phase_split,
+        "multiple_testing_trials": multiple_testing_trials,
         "score_formulas": _digit_backtest_score_formulas(),
         "first_walk_forward_draw_id": observations[start].draw_id,
         "first_test_draw_id": observations[evaluation_start_index].draw_id,
@@ -1446,6 +1808,8 @@ def _digit_backtest(dataset: ProductDataset) -> dict[str, object]:
         ),
     }
     _validate_backtest_target_scope(report)
+    _validate_backtest_phase_split(report)
+    _validate_backtest_multiple_testing_trials(report)
     return report
 
 
@@ -1489,6 +1853,7 @@ def _number_scores(
             "short_z": short_z,
             "overdue_ratio": overdue_ratio,
             "recent": 0.6 * short_z + 0.4 * recent_z,
+            "balanced_no_overdue": 0.4 * short_z + 0.3 * recent_z - 0.15 * long_z,
             "balanced": (
                 0.4 * short_z
                 + 0.3 * recent_z
@@ -1727,6 +2092,14 @@ def _digit_sequence_from_scores(
                     + 0.35 * _clip_signal(recent_z)
                     + 0.2 * _clip_signal(short_z)
                 )
+            elif strategy == "short":
+                score = short_z
+            elif strategy == "long":
+                score = long_z
+            elif strategy == "balanced_no_long_penalty":
+                score = 0.4 * short_z + 0.3 * recent_z
+            elif strategy == "audit_unclipped":
+                score = 0.45 * long_z + 0.35 * recent_z + 0.2 * short_z
             else:
                 score = 0.4 * short_z + 0.3 * recent_z - 0.2 * long_z
             scores[digit] = score + _stable_jitter(f"{seed}|{position}", digit) * 1e-6

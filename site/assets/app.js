@@ -1658,6 +1658,7 @@ function renderBacktest(backtest, kind) {
       : "Kết luận: các chiến lược hiện tại chưa tốt hơn cách chọn đồng đều một cách đáng tin cậy.";
   const scoreDescription = renderBacktestScoreFormulas(backtest.score_formulas, kind);
   const phaseDescription = renderBacktestPhaseSplit(backtest.phase_split);
+  const multipleTestingDescription = renderBacktestMultipleTestingScope(backtest);
   container.innerHTML = `
     <div class="backtest-score">
       ${modelRows.map((row) => {
@@ -1708,7 +1709,7 @@ function renderBacktest(backtest, kind) {
           ${scoreDescription}
           <li><strong>Baseline đồng đều chính xác</strong><span>Với tập số, kỳ vọng và phân bố số trùng được tính bằng phân bố siêu bội. Với chuỗi chữ số, chương trình đếm chính xác toàn bộ không gian chuỗi hợp lệ của từng kỳ. Kết quả không phụ thuộc seed.</span></li>
           <li><strong>So sánh theo từng kỳ</strong><span>Với mỗi kỳ tính d = điểm chiến lược - điểm kỳ vọng đồng đều. Báo cáo lấy trung bình d và tính z = trung bình(d) / (độ lệch chuẩn(d) / √n), rồi lấy p hai phía từ phân bố chuẩn.</span></li>
-          <li><strong>Hiệu chỉnh toàn hệ thống</strong><span>Tất cả p-value của ba chiến lược trên mọi sản phẩm được hiệu chỉnh Benjamini-Hochberg. Chỉ ghi "vượt baseline" khi trung bình d &gt; 0 và q toàn hệ thống &lt; 0,05.</span></li>
+          ${multipleTestingDescription}
         </ol>
         <p>
           Mã triển khai nằm trong
@@ -1732,6 +1733,20 @@ function renderBacktestPhaseSplit(phaseSplit) {
       ${numberFormatter.format(evaluation.draw_count || 0)} kỳ sau là phase đánh giá cuối.
       Tổng cửa sổ walk-forward ${numberFormatter.format(total)} kỳ; scope đánh giá cuối
       ${escapeHtml(evaluation.scope_id || "chưa công bố")} trùng với target_scope.
+    </span></li>`;
+}
+
+function renderBacktestMultipleTestingScope(backtest) {
+  const registry = backtest.multiple_testing_trials || {};
+  const trialCount = registry.trial_count || backtest.comparison?.multiple_testing_scope || 0;
+  const publishedCount = registry.published_trial_count || 3;
+  const variantCount = registry.registered_parameter_variant_count || 0;
+  return `
+    <li><strong>Registry hiệu chỉnh nhiều phép thử</strong><span>
+      Benjamini-Hochberg chạy trên ${numberFormatter.format(trialCount)} trial trong cùng scope,
+      gồm ${numberFormatter.format(publishedCount)} mô hình công bố và
+      ${numberFormatter.format(variantCount)} biến thể tham số đã đăng ký/thử.
+      Chỉ ghi "vượt baseline" khi trung bình d &gt; 0 và q toàn hệ thống &lt; 0,05.
     </span></li>`;
 }
 

@@ -232,6 +232,20 @@ def test_walk_forward_backtest_reports_uniform_baseline() -> None:
         phase_split["final_evaluation_phase"]["draw_ids_sha256"]
         == target_scope["target_draw_ids_sha256"]
     )
+    trial_registry = report["multiple_testing_trials"]
+    assert trial_registry["method"] == "benjamini_hochberg_over_published_and_registered_trials"
+    assert trial_registry["trial_count"] == 7
+    assert trial_registry["published_trial_count"] == 3
+    assert trial_registry["registered_parameter_variant_count"] == 4
+    assert {
+        row["published_comparison_key"]
+        for row in trial_registry["trials"]
+        if row["published"]
+    } == {"comparison", "recent_comparison", "audit_comparison"}
+    assert all(
+        row["target_scope_id"] == target_scope["scope_id"]
+        for row in trial_registry["trials"]
+    )
     assert report["baseline"]["strategy"] == "uniform_exact_expectation"
     assert report["baseline"]["method"] == "exact_hypergeometric_expectation"
     assert report["baseline"]["average_hits"] == 0.8
@@ -365,9 +379,18 @@ def test_digit_backtest_predictions_use_only_prior_draws(monkeypatch) -> None:
     positions = dataset.product.sequence_length or 0
     original_digit_sequence = predictions_module._digit_sequence_from_scores
     calls: list[tuple[int, str]] = []
+    expected_strategies = (
+        "balanced",
+        "recent",
+        "audit",
+        "short",
+        "long",
+        "balanced_no_long_penalty",
+        "audit_unclipped",
+    )
 
     def guarded_digit_sequence(total, recent, short, symbols, strategy, seed):
-        target_index = start + len(calls) // 3
+        target_index = start + len(calls) // len(expected_strategies)
         assert total == _digit_observation_counts(
             observations[:target_index],
             positions,
@@ -396,7 +419,7 @@ def test_digit_backtest_predictions_use_only_prior_draws(monkeypatch) -> None:
     assert calls == [
         (index, strategy)
         for index in range(start, len(observations))
-        for strategy in ("balanced", "recent", "audit")
+        for strategy in expected_strategies
     ]
 
 
@@ -411,6 +434,9 @@ def test_digit_walk_forward_backtest_reports_digit_score_formula() -> None:
     assert report["phase_split"]["final_evaluation_phase"]["scope_id"] == report[
         "target_scope"
     ]["scope_id"]
+    assert report["multiple_testing_trials"]["trial_count"] == 7
+    assert report["multiple_testing_trials"]["published_trial_count"] == 3
+    assert report["multiple_testing_trials"]["registered_parameter_variant_count"] == 4
     assert report["baseline"]["method"] == "exact_sequence_enumeration"
     partial_baseline = report["baseline"]["partial_match_baseline"]
     assert partial_baseline["method"] == "exact_sequence_enumeration"
@@ -477,6 +503,62 @@ def _mock_phase_split(scope_id: str, final_count: int) -> dict[str, object]:
     }
 
 
+def _mock_trial(
+    *,
+    scope_id: str,
+    final_count: int,
+    trial_id: str,
+    metric_key: str,
+    difference: float,
+    p_value: float,
+    published_key: str | None = None,
+) -> dict[str, object]:
+    return {
+        "trial_id": trial_id,
+        "strategy": trial_id.split(":", 1)[0],
+        "label": trial_id,
+        "variant_role": (
+            "published_final_model"
+            if published_key is not None
+            else "registered_parameter_variant"
+        ),
+        "published": published_key is not None,
+        "published_comparison_key": published_key,
+        "target_scope_id": scope_id,
+        "target_draw_count": final_count,
+        metric_key: difference,
+        "paired_z_score": 0.0,
+        "approximate_p_value": p_value,
+        "standard_error": 0.0,
+        "confidence_level": 0.95,
+        "confidence_interval_lower": difference,
+        "confidence_interval_upper": difference,
+        "parameters": {},
+    }
+
+
+def _mock_multiple_testing_trials(
+    *,
+    scope_id: str,
+    final_count: int,
+    metric_key: str,
+    trials: list[dict[str, object]],
+) -> dict[str, object]:
+    published_count = sum(bool(row["published"]) for row in trials)
+    return {
+        "method": "benjamini_hochberg_over_published_and_registered_trials",
+        "scope_policy": "published_final_models_plus_registered_parameter_variants",
+        "product_kind": "number_set"
+        if metric_key == "mean_hit_difference"
+        else "digit_sequence",
+        "comparison_metric": metric_key,
+        "trial_count": len(trials),
+        "published_trial_count": published_count,
+        "registered_parameter_variant_count": len(trials) - published_count,
+        "trials": trials,
+    }
+
+
 def test_finalize_backtests_applies_global_bh_correction() -> None:
     scope = {
         "scope_id": "scope-a",
@@ -491,6 +573,39 @@ def test_finalize_backtests_applies_global_bh_correction() -> None:
                 "samples": 10,
                 "target_scope": scope,
                 "phase_split": _mock_phase_split("scope-a", 10),
+                "multiple_testing_trials": _mock_multiple_testing_trials(
+                    scope_id="scope-a",
+                    final_count=10,
+                    metric_key="mean_hit_difference",
+                    trials=[
+                        _mock_trial(
+                            scope_id="scope-a",
+                            final_count=10,
+                            trial_id="balanced_signal:published_final",
+                            metric_key="mean_hit_difference",
+                            difference=0.1,
+                            p_value=0.01,
+                            published_key="comparison",
+                        ),
+                        _mock_trial(
+                            scope_id="scope-a",
+                            final_count=10,
+                            trial_id="audit_signal:published_final",
+                            metric_key="mean_hit_difference",
+                            difference=0.1,
+                            p_value=0.04,
+                            published_key="audit_comparison",
+                        ),
+                        _mock_trial(
+                            scope_id="scope-a",
+                            final_count=10,
+                            trial_id="short_frequency:shadow",
+                            metric_key="mean_hit_difference",
+                            difference=0.0,
+                            p_value=1.0,
+                        ),
+                    ],
+                ),
                 "comparison": {
                     "mean_hit_difference": 0.1,
                     "approximate_p_value": 0.01,
@@ -512,6 +627,39 @@ def test_finalize_backtests_applies_global_bh_correction() -> None:
                 "samples": 10,
                 "target_scope": scope,
                 "phase_split": _mock_phase_split("scope-a", 10),
+                "multiple_testing_trials": _mock_multiple_testing_trials(
+                    scope_id="scope-a",
+                    final_count=10,
+                    metric_key="mean_position_match_difference",
+                    trials=[
+                        _mock_trial(
+                            scope_id="scope-a",
+                            final_count=10,
+                            trial_id="balanced_signal:published_final",
+                            metric_key="mean_position_match_difference",
+                            difference=0.1,
+                            p_value=0.06,
+                            published_key="comparison",
+                        ),
+                        _mock_trial(
+                            scope_id="scope-a",
+                            final_count=10,
+                            trial_id="audit_signal:published_final",
+                            metric_key="mean_position_match_difference",
+                            difference=-0.1,
+                            p_value=0.001,
+                            published_key="audit_comparison",
+                        ),
+                        _mock_trial(
+                            scope_id="scope-a",
+                            final_count=10,
+                            trial_id="short_frequency:shadow",
+                            metric_key="mean_position_match_difference",
+                            difference=0.0,
+                            p_value=1.0,
+                        ),
+                    ],
+                ),
                 "comparison": {
                     "mean_position_match_difference": 0.1,
                     "approximate_p_value": 0.06,
@@ -531,14 +679,20 @@ def test_finalize_backtests_applies_global_bh_correction() -> None:
     summary = finalize_backtests(reports)
 
     assert summary["comparison_count"] == 4
+    assert summary["correction_trial_count"] == 6
     assert summary["target_scope_validation"]["status"] == "validated"
     assert summary["target_scope_validation"]["product_count"] == 2
     assert summary["phase_split_validation"]["status"] == "validated"
     assert summary["phase_split_validation"]["product_count"] == 2
+    assert summary["multiple_testing_registry_validation"]["status"] == "validated"
+    assert (
+        summary["multiple_testing_registry_validation"]["correction_trial_count"] == 6
+    )
     assert summary["unadjusted_winning_comparisons"] == 2
     assert summary["adjusted_winning_comparisons"] == 1
     assert summary["products_with_adjusted_win"] == ["first"]
-    assert reports[0]["backtest"]["comparison"]["q_value_global_bh"] == 0.02
+    assert reports[0]["backtest"]["comparison"]["q_value_global_bh"] == 0.03
+    assert reports[0]["backtest"]["comparison"]["multiple_testing_scope"] == 6
     assert reports[0]["backtest"]["comparison"]["beats_baseline"] is True
     assert reports[0]["backtest"]["audit_comparison"]["beats_baseline"] is False
     assert reports[1]["backtest"]["audit_comparison"]["beats_baseline"] is False
