@@ -267,6 +267,11 @@ TEST_DEPENDENCY_PROFILES = {
 }
 
 EFFECT_THRESHOLD_SENSITIVITY_MULTIPLIERS = [0.5, 1.0, 1.5, 2.0]
+POWER_ALPHA = 0.05
+POWER_LEVELS = [0.8, 0.9]
+POWER_PRIMARY_LEVEL = 0.8
+POWER_UNSUPPORTED_EFFECTS = {"gap divided by expected gap"}
+POWER_NULL_EFFECTS = {"repeat pairs ratio": 1.0}
 
 EFFECT_THRESHOLD_REGISTRY = [
     {
@@ -548,6 +553,7 @@ def finalize_audits(product_reports: list[dict[str, Any]]) -> dict[str, Any]:
         "multiple_testing": _multiple_testing_metadata(),
         "effect_thresholds": _effect_threshold_metadata(),
         "threshold_sensitivity": _effect_threshold_sensitivity(product_reports),
+        "power_summary": _global_power_summary(product_reports),
         "deferred_methods": DEFERRED_METHODS,
         "summary": _global_summary(product_reports),
         "products": [
@@ -557,6 +563,7 @@ def finalize_audits(product_reports: list[dict[str, Any]]) -> dict[str, Any]:
                 "history_draws": report["audit"]["history_draws"],
                 "status_counts": report["audit"]["status_counts"],
                 "strongest_signal": report["audit"]["strongest_signal"],
+                "power_summary": report["audit"].get("power_summary"),
                 "conclusion": report["audit"]["conclusion"],
                 "next_recommended_audit_after_draws": report["audit"][
                     "next_recommended_audit_after_draws"
@@ -598,6 +605,15 @@ def audit_log_events(product_reports: list[dict[str, Any]]) -> Iterator[dict[str
                 "effect_size": test.get("effect_size"),
                 "practical_effect_threshold": test.get("practical_effect_threshold"),
                 "effect_threshold_id": test.get("effect_threshold_id"),
+                "power_status": test.get("power_analysis", {}).get("status"),
+                "power_effective_sample_size": test.get("power_analysis", {}).get(
+                    "effective_sample_size"
+                ),
+                "power_observed": test.get("power_analysis", {}).get("observed_power"),
+                "minimum_detectable_effect_80": _minimum_detectable_effect_for_power(
+                    test,
+                    POWER_PRIMARY_LEVEL,
+                ),
                 "statistically_notable": test.get("statistically_notable"),
                 "practically_large": test.get("practically_large"),
                 "interpretation": test["interpretation"],
@@ -640,6 +656,7 @@ def _audit_payload(dataset: ProductDataset, tests: list[dict[str, Any]]) -> dict
         "dependency_matrix": _dependency_matrix(tests),
         "multiple_testing": _multiple_testing_metadata(),
         "effect_thresholds": _effect_threshold_metadata(),
+        "power_summary": _power_summary(tests),
         "status_counts": dict(Counter(test["status"] for test in tests)),
         "strongest_signal": _strongest_signal(tests),
         "conclusion": _audit_conclusion(tests),
@@ -822,6 +839,7 @@ def _chi_square_test(
         effect_size=effect,
         practical_threshold=practical_threshold,
         sample_size=sample_size,
+        power_sample_size=effect_denominator,
     )
 
 
@@ -861,6 +879,7 @@ def _g_test(
         effect_size=effect,
         practical_threshold=practical_threshold,
         sample_size=sample_size,
+        power_sample_size=effect_denominator,
     )
 
 
@@ -970,6 +989,7 @@ def _split_half_change_test(
         effect_size=effect,
         practical_threshold=0.15,
         sample_size=len(values),
+        power_sample_size=1 / ((1 / len(first)) + (1 / len(second))),
         parameters={
             "first_half_mean": _round(fmean(first)),
             "second_half_mean": _round(fmean(second)),
@@ -1017,6 +1037,7 @@ def _month_heterogeneity_number_test(
         effect_size=math.sqrt(statistic / total) if total else 0.0,
         practical_threshold=0.05,
         sample_size=len(dataset.observations),
+        power_sample_size=total,
         parameters={"months_with_data": len(months), "cells": cells},
     )
 
@@ -1060,6 +1081,7 @@ def _month_heterogeneity_digit_test(dataset: ProductDataset) -> dict[str, Any] |
         effect_size=math.sqrt(statistic / total_digits) if total_digits else 0.0,
         practical_threshold=0.05,
         sample_size=sum(month_outcomes.values()),
+        power_sample_size=total_digits,
         parameters={"months_with_data": len(months)},
     )
 
@@ -1148,6 +1170,7 @@ def _pair_co_occurrence_test(dataset: ProductDataset) -> dict[str, Any] | None:
         else 0.0,
         practical_threshold=0.05,
         sample_size=len(dataset.observations),
+        power_sample_size=total_pair_observations,
         parameters={
             "pairs": len(all_pairs),
             "expected_count_per_pair": _round(expected),
@@ -1251,6 +1274,7 @@ def _digit_position_test(
         effect_size=math.sqrt(statistic / (len(outcomes) * length)),
         practical_threshold=0.05,
         sample_size=len(outcomes),
+        power_sample_size=len(outcomes) * length,
         parameters={
             "expected_per_position_digit": _round(expected),
             "position_residuals": residuals,
@@ -1766,6 +1790,7 @@ def _repeat_rate_test(
         effect_size=observed_pairs / expected_pairs,
         practical_threshold=1.25,
         sample_size=len(outcomes),
+        power_sample_size=expected_pairs,
         parameters={
             "observed_duplicate_pairs": int(observed_pairs),
             "expected_duplicate_pairs": _round(expected_pairs),
@@ -1789,9 +1814,17 @@ def _test_result(
     practical_threshold: float,
     sample_size: int,
     degrees_of_freedom: int | None = None,
+    power_sample_size: float | None = None,
     parameters: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     dependency = _test_dependency_metadata(test_id)
+    power_analysis = _power_analysis(
+        effect_size_name=effect_size_name,
+        effect_size=effect_size,
+        practical_threshold=practical_threshold,
+        sample_size=sample_size,
+        power_sample_size=power_sample_size,
+    )
     return {
         "id": test_id,
         "family": family,
@@ -1811,6 +1844,7 @@ def _test_result(
         "practical_effect_threshold": practical_threshold,
         "effect_threshold_id": _effect_threshold_id(effect_size_name, practical_threshold),
         "sample_size": sample_size,
+        "power_analysis": power_analysis,
         "parameters": parameters or {},
         "status": "pending",
         "statistically_notable": False,
@@ -1849,6 +1883,11 @@ def _skipped_test(
         "practical_effect_threshold": None,
         "effect_threshold_id": None,
         "sample_size": sample_size,
+        "power_analysis": {
+            "status": "not_applicable",
+            "method": "not_run_for_skipped_test",
+            "reason": "Phép kiểm tạm hoãn nên không tính công suất cho snapshot này.",
+        },
         "parameters": parameters or {},
         "status": "skipped",
         "statistically_notable": False,
@@ -2000,6 +2039,173 @@ def _effect_sensitivity_row(
         "practically_large_count": len(practically_large),
         "both_count": len(both),
     }
+
+
+def _power_analysis(
+    *,
+    effect_size_name: str,
+    effect_size: float,
+    practical_threshold: float,
+    sample_size: int,
+    power_sample_size: float | None = None,
+) -> dict[str, Any]:
+    if effect_size_name in POWER_UNSUPPORTED_EFFECTS:
+        return {
+            "status": "unsupported_scale",
+            "method": "not_available_for_extreme_value_ratio",
+            "effect_size_name": effect_size_name,
+            "sample_size": sample_size,
+            "reason": (
+                "Thang hiệu ứng này là tỷ lệ khoảng vắng cực trị; cần mô hình riêng "
+                "thay vì xấp xỉ chuẩn theo căn cỡ mẫu."
+            ),
+        }
+
+    effective_sample = float(power_sample_size if power_sample_size is not None else sample_size)
+    if effective_sample <= 1:
+        return {
+            "status": "insufficient_sample",
+            "method": "normal_approximation",
+            "effect_size_name": effect_size_name,
+            "sample_size": sample_size,
+            "effective_sample_size": _round(max(0.0, effective_sample)),
+            "reason": "Mẫu hiệu dụng quá nhỏ để ước lượng công suất.",
+        }
+
+    null_effect = POWER_NULL_EFFECTS.get(effect_size_name, 0.0)
+    observed_delta = abs(float(effect_size) - null_effect)
+    threshold_delta = abs(float(practical_threshold) - null_effect)
+    z_alpha = NORMAL.inv_cdf(1 - POWER_ALPHA / 2)
+    target_powers = [
+        _power_target_row(
+            power=power,
+            effective_sample=effective_sample,
+            null_effect=null_effect,
+            threshold_delta=threshold_delta,
+        )
+        for power in POWER_LEVELS
+    ]
+    primary = next(
+        row
+        for row in target_powers
+        if math.isclose(float(row["power"]), POWER_PRIMARY_LEVEL)
+    )
+    return {
+        "status": "available",
+        "method": "normal_approximation",
+        "alpha": POWER_ALPHA,
+        "tail": "two_sided",
+        "primary_power": POWER_PRIMARY_LEVEL,
+        "effect_size_name": effect_size_name,
+        "sample_size": sample_size,
+        "effective_sample_size": _round(effective_sample),
+        "null_effect_size": _round(null_effect),
+        "observed_effect_delta": _round(observed_delta),
+        "observed_power": _round(
+            _two_sided_power_from_delta(observed_delta, effective_sample, z_alpha),
+            4,
+        ),
+        "practical_threshold_delta": _round(threshold_delta),
+        "practical_threshold_detectable_at_primary_power": bool(
+            primary["practical_threshold_detectable"]
+        ),
+        "target_powers": target_powers,
+        "interpretation": (
+            "MDE là hiệu ứng nhỏ nhất xấp xỉ có thể phát hiện ở alpha 0,05 hai phía "
+            "với mẫu hiệu dụng hiện tại. Đây là phân tích công suất mô tả, không tạo p-value mới."
+        ),
+    }
+
+
+def _power_target_row(
+    *,
+    power: float,
+    effective_sample: float,
+    null_effect: float,
+    threshold_delta: float,
+) -> dict[str, Any]:
+    z_alpha = NORMAL.inv_cdf(1 - POWER_ALPHA / 2)
+    z_power = NORMAL.inv_cdf(power)
+    mde_delta = (z_alpha + z_power) / math.sqrt(effective_sample)
+    sample_needed = (
+        math.ceil(((z_alpha + z_power) / threshold_delta) ** 2)
+        if threshold_delta > 0
+        else None
+    )
+    row: dict[str, Any] = {
+        "power": power,
+        "minimum_detectable_effect_delta": _round(mde_delta),
+        "minimum_detectable_effect": _round(null_effect + mde_delta),
+        "practical_threshold_detectable": threshold_delta >= mde_delta,
+        "sample_size_needed_for_practical_threshold": sample_needed,
+    }
+    if not math.isclose(null_effect, 0.0):
+        row["minimum_detectable_effect_lower"] = _round(max(0.0, null_effect - mde_delta))
+    return row
+
+
+def _two_sided_power_from_delta(
+    effect_delta: float,
+    effective_sample: float,
+    z_alpha: float,
+) -> float:
+    signal = abs(effect_delta) * math.sqrt(effective_sample)
+    return (1 - NORMAL.cdf(z_alpha - signal)) + NORMAL.cdf(-z_alpha - signal)
+
+
+def _power_summary(tests: list[dict[str, Any]]) -> dict[str, Any]:
+    active = [test for test in tests if test.get("status") != "skipped"]
+    available = [
+        test
+        for test in active
+        if test.get("power_analysis", {}).get("status") == "available"
+    ]
+    detectable = [
+        test
+        for test in available
+        if test["power_analysis"].get("practical_threshold_detectable_at_primary_power")
+    ]
+    unsupported = [
+        test
+        for test in active
+        if test.get("power_analysis", {}).get("status") == "unsupported_scale"
+    ]
+    return {
+        "method": "normal_approximation",
+        "alpha": POWER_ALPHA,
+        "primary_power": POWER_PRIMARY_LEVEL,
+        "test_count": len(active),
+        "supported_test_count": len(available),
+        "unsupported_test_count": len(unsupported),
+        "threshold_detectable_count": len(detectable),
+        "threshold_detectable_rate": _round(len(detectable) / len(available))
+        if available
+        else None,
+        "interpretation": (
+            "Đếm số phép kiểm mà mẫu hiện tại đủ để phát hiện ngưỡng thực dụng đã khóa "
+            "ở công suất xấp xỉ 80%. Các thang cực trị được đánh dấu riêng."
+        ),
+    }
+
+
+def _global_power_summary(product_reports: list[dict[str, Any]]) -> dict[str, Any]:
+    tests = [
+        test
+        for report in product_reports
+        for test in report.get("audit", {}).get("tests", [])
+    ]
+    return _power_summary(tests)
+
+
+def _minimum_detectable_effect_for_power(
+    test: dict[str, Any],
+    power: float,
+) -> float | None:
+    for row in test.get("power_analysis", {}).get("target_powers", []):
+        if math.isclose(float(row.get("power", -1.0)), power):
+            value = row.get("minimum_detectable_effect")
+            return float(value) if isinstance(value, (int, float)) else None
+    return None
 
 
 def _dependency_matrix(tests: list[dict[str, Any]]) -> dict[str, Any]:

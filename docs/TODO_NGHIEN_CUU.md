@@ -280,7 +280,16 @@ file để giữ lại dấu vết thay đổi.
     đánh dấu nguồn đủ mẫu và nguồn quá nhỏ, ghi `top_residuals` nhưng không tạo p-value mới.
   - Website hiển thị bảng nguồn trong phần residual vị trí, tài liệu hóa trong
     `docs/AUDIT_SOURCE_BREAKDOWN.md`, và khóa bằng unit test cùng static-site test.
-- [ ] `AUDIT-010` Thực hiện phân tích công suất và hiệu ứng nhỏ nhất có thể phát hiện.
+- [x] `AUDIT-010` Thực hiện phân tích công suất và hiệu ứng nhỏ nhất có thể phát hiện.
+  - Hoàn thành ngày 18/06/2026.
+  - Mỗi test active trong fairness audit có `power_analysis`, gồm mẫu hiệu dụng,
+    công suất quan sát xấp xỉ, MDE tại 80% và 90%, cùng số mẫu cần để phát hiện ngưỡng
+    thực dụng đã khóa trước.
+  - Audit cấp sản phẩm và toàn hệ thống có `power_summary`, website hiển thị `MDE 80%`
+    và `Công suất xấp xỉ` trong chi tiết kiểm định.
+  - Tài liệu hóa trong `docs/AUDIT_POWER_ANALYSIS.md`; khóa bằng unit test, documentation
+    test và static-site test. Các thang cực trị như max gap được đánh dấu `unsupported_scale`
+    thay vì dùng sai công thức chuẩn.
 
 ### P1.3 Phép kiểm bền vững hơn
 

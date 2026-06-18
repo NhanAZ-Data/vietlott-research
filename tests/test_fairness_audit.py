@@ -67,6 +67,31 @@ def test_number_audit_contains_lightweight_fairness_tests() -> None:
     assert all(entry["scope"] for entry in audit["effect_thresholds"])
     assert all(entry["reference_or_rationale"] for entry in audit["effect_thresholds"])
     assert all(entry["sensitivity_method"] for entry in audit["effect_thresholds"])
+    assert audit["power_summary"]["primary_power"] == 0.8
+    assert audit["power_summary"]["supported_test_count"] > 0
+    assert audit["power_summary"]["threshold_detectable_count"] <= audit["power_summary"][
+        "supported_test_count"
+    ]
+    assert all("power_analysis" in test for test in active_tests)
+    frequency_power = next(
+        test["power_analysis"]
+        for test in active_tests
+        if test["id"] == "number_marginal_chi_square"
+    )
+    assert frequency_power["status"] == "available"
+    assert frequency_power["effective_sample_size"] == 540
+    assert frequency_power["practical_threshold_delta"] == 0.05
+    assert any(row["power"] == 0.8 for row in frequency_power["target_powers"])
+    assert all(
+        row["minimum_detectable_effect"] > 0
+        for row in frequency_power["target_powers"]
+    )
+    gap_power = next(
+        test["power_analysis"]
+        for test in active_tests
+        if test["id"] == "number_current_gap_geometric"
+    )
+    assert gap_power["status"] == "unsupported_scale"
 
 
 def test_finalize_audits_adds_global_correction_and_jsonl_events() -> None:
@@ -110,6 +135,8 @@ def test_finalize_audits_adds_global_correction_and_jsonl_events() -> None:
     assert summary["multiple_testing"]["primary_decision_q"] == "q_value_global_bh"
     assert summary["threshold_sensitivity"]["method"] == "threshold_multiplier_sweep"
     assert summary["threshold_sensitivity"]["multipliers"] == [0.5, 1.0, 1.5, 2.0]
+    assert summary["power_summary"]["method"] == "normal_approximation"
+    assert summary["power_summary"]["supported_test_count"] > 0
     assert any(
         entry["test_count"] > 0
         for entry in summary["threshold_sensitivity"]["by_threshold"]
@@ -117,6 +144,8 @@ def test_finalize_audits_adds_global_correction_and_jsonl_events() -> None:
     assert events
     assert {event["event_type"] for event in events} == {"fairness_audit_test"}
     assert all("dependency_family" in event for event in events)
+    assert any(event["minimum_detectable_effect_80"] is not None for event in events)
+    assert any(event["power_status"] == "available" for event in events)
     assert any(event["q_value_dependency_family_bh"] is not None for event in events)
     assert all(
         "q_value_global_bh" in test

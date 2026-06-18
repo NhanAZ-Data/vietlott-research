@@ -635,6 +635,10 @@ function renderFairnessAudit(audit) {
   const statisticallyNotable = counts.statistically_notable || 0;
   const practicallyLarge = counts.practically_large || 0;
   const pass = counts.pass || 0;
+  const powerSummary = audit.power_summary || {};
+  const powerCoverage = powerSummary.supported_test_count
+    ? `${numberFormatter.format(powerSummary.threshold_detectable_count || 0)}/${numberFormatter.format(powerSummary.supported_test_count)}`
+    : "N/A";
   const verdict = both
     ? "Đạt cả hai điều kiện"
     : statisticallyNotable
@@ -650,6 +654,7 @@ function renderFairnessAudit(audit) {
     ["Nổi bật thống kê", statisticallyNotable],
     ["Độ lớn thực dụng", practicallyLarge],
     ["Đạt cả hai", both],
+    ["Ngưỡng đủ công suất", powerCoverage],
     ["Chạy lại sau", `${numberFormatter.format(audit.audit_interval_draws)} kỳ`],
   ];
   document.getElementById("audit-product-metrics").innerHTML = metrics
@@ -689,6 +694,7 @@ function renderFairnessAudit(audit) {
           <p><b>p gốc</b> nằm từ 0 đến 1. Số càng nhỏ thì kết quả càng khó xảy ra nếu mô hình tham chiếu đúng.</p>
           <p><b>q hiệu chỉnh</b> cũng nằm từ 0 đến 1, nhưng đã tính việc chạy nhiều phép kiểm. Khi kết luận, ưu tiên đọc q thay cho p.</p>
           <p><b>Độ lớn</b> cho biết sai lệch mạnh đến đâu. Thang đo thay đổi theo thuật toán, vì vậy phải so với "ngưỡng thực dụng" của chính phép kiểm đó.</p>
+          <p><b>MDE 80%</b> là hiệu ứng nhỏ nhất xấp xỉ có thể phát hiện ở công suất 80% với mẫu hiện tại.</p>
         </aside>
         ${highlightedTests.map(renderAuditTestRow).join("")}
       </div>
@@ -946,6 +952,11 @@ function renderAuditTestRow(test) {
   const threshold = test.practical_effect_threshold == null
     ? "Không áp dụng"
     : formatDecimal(test.practical_effect_threshold, 4);
+  const power = test.power_analysis || {};
+  const mde80 = renderPowerMde(power, 0.8);
+  const observedPower = power.status === "available" && power.observed_power != null
+    ? formatPercent(power.observed_power)
+    : "N/A";
   return `
     <article class="audit-test-row ${escapeHtml(test.status)}">
       <div>
@@ -961,8 +972,17 @@ function renderAuditTestRow(test) {
         <div><dt>Họ phụ thuộc</dt><dd>${escapeHtml(test.dependency_family_label || "Chưa phân nhóm")}</dd></div>
         <div><dt>Độ lớn</dt><dd>${escapeHtml(effect)}</dd></div>
         <div><dt>Ngưỡng thực dụng</dt><dd>${escapeHtml(threshold)}</dd></div>
+        <div><dt>MDE 80%</dt><dd>${escapeHtml(mde80)}</dd></div>
+        <div><dt>Công suất xấp xỉ</dt><dd>${escapeHtml(observedPower)}</dd></div>
       </dl>
     </article>`;
+}
+
+function renderPowerMde(power, targetPower) {
+  if (!power || power.status !== "available") return "N/A";
+  const target = (power.target_powers || []).find((item) => item.power === targetPower);
+  if (!target || target.minimum_detectable_effect == null) return "N/A";
+  return formatDecimal(target.minimum_detectable_effect, 4);
 }
 
 function renderWeatherReport(weather) {

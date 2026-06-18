@@ -19,7 +19,7 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert 'id="phan-tich"' in index
     assert 'id="du-doan"' in index
     assert 'id="kiem-dinh"' in index
-    assert "assets/app.js?v=20260618-3" in index
+    assert "assets/app.js?v=20260618-4" in index
     assert "archive-summary-heading" in index
     assert "Sổ dự đoán toàn hệ thống" in index
     assert "assets/docs.js?v=20260618-2" in data_page
@@ -59,6 +59,9 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert "renderAuditVisualLog" in app_script
     assert "renderAuditThresholdSensitivity" in app_script
     assert "threshold_sensitivity" in app_script
+    assert "renderPowerMde" in app_script
+    assert "MDE 80%" in app_script
+    assert "Ngưỡng đủ công suất" in app_script
     assert "renderAuditDependencyMatrix" in app_script
     assert "Ma trận phụ thuộc" in app_script
     assert "q theo họ" in app_script
@@ -181,6 +184,7 @@ def test_generated_site_data_matches_manifest() -> None:
     assert audit_summary["dependency_families"]
     assert audit_summary["dependency_matrix"]["pairs"]
     assert audit_summary["multiple_testing"]["diagnostic_family_q"] == "q_value_dependency_family_bh"
+    assert audit_summary["power_summary"]["primary_power"] == 0.8
     assert audit_log
     assert analysis_export["export_type"] == "vietlott_research_analysis"
     assert analysis_export["manifest"] == manifest
@@ -234,6 +238,23 @@ def test_generated_site_data_matches_manifest() -> None:
         )
         assert report["audit"]["suite_version"] == "2.0.0"
         assert report["audit"]["dependency_matrix"]["pairs"]
+        assert report["audit"]["power_summary"]["supported_test_count"] > 0
+        active_tests = [
+            item
+            for item in report["audit"]["tests"]
+            if item["status"] != "skipped"
+        ]
+        assert all("power_analysis" in item for item in active_tests)
+        available_power = [
+            item["power_analysis"]
+            for item in active_tests
+            if item["power_analysis"]["status"] == "available"
+        ]
+        assert available_power
+        assert all(
+            any(row["power"] == 0.8 for row in item["target_powers"])
+            for item in available_power
+        )
         if product["slug"] in {"max3d", "max4d"}:
             position_test = next(
                 item
