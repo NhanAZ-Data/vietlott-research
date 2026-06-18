@@ -22,6 +22,7 @@ def test_research_documentation_and_issue_templates_exist() -> None:
         ROOT / "docs" / "AUDIT_KENO_PAIR_COOCCURRENCE.md",
         ROOT / "docs" / "BACKTEST_TARGET_SCOPE.md",
         ROOT / "docs" / "BACKTEST_SCORE_FORMULAS.md",
+        ROOT / "docs" / "BACKTEST_PHASE_SPLIT.md",
         ROOT / "docs" / "METHODOLOGY_CHANGELOG.md",
         ROOT / "docs" / "templates" / "BAO_CAO_KET_QUA_AM.md",
         ROOT / "docs" / "DU_DOAN_BINGO18_0171884.md",
@@ -54,6 +55,7 @@ def test_readme_links_research_documents_without_em_dash() -> None:
     assert "docs/AUDIT_KENO_PAIR_COOCCURRENCE.md" in readme
     assert "docs/BACKTEST_TARGET_SCOPE.md" in readme
     assert "docs/BACKTEST_SCORE_FORMULAS.md" in readme
+    assert "docs/BACKTEST_PHASE_SPLIT.md" in readme
     assert "docs/METHODOLOGY_CHANGELOG.md" in readme
     assert "docs/templates/BAO_CAO_KET_QUA_AM.md" in readme
     assert "docs/DU_DOAN_BINGO18_0171884.md" in readme
@@ -225,3 +227,17 @@ def test_backtest_score_formula_documentation_has_required_fields() -> None:
     assert "special_numbers_not_scored_in_backtest" in document
     assert "partial_match_baseline" in document
     assert "expected_partial_match_count" in document
+
+
+def test_backtest_phase_split_documentation_has_required_fields() -> None:
+    document = (ROOT / "docs" / "BACKTEST_PHASE_SPLIT.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "phase_split" in document
+    assert "selection_phase" in document
+    assert "final_evaluation_phase" in document
+    assert "formulas_frozen_before_final_evaluation" in document
+    assert "selection_result_used_to_choose_formulas" in document
+    assert "target_scope" in document
+    assert "phase_split_validation" in document

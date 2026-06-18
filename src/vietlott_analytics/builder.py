@@ -217,6 +217,7 @@ def _build_analysis_export(
                 "partial_match_baseline_field": (
                     "product_reports[*].backtest.baseline.partial_match_baseline"
                 ),
+                "phase_split_field": "product_reports[*].backtest.phase_split",
                 "score_units": {
                     "number_set": "main_number_hits_per_draw",
                     "digit_sequence": "best_position_matches_per_draw",
@@ -228,6 +229,10 @@ def _build_analysis_export(
                 },
                 "target_scope_validation": manifest.get("backtest_summary", {}).get(
                     "target_scope_validation",
+                    {},
+                ),
+                "phase_split_validation": manifest.get("backtest_summary", {}).get(
+                    "phase_split_validation",
                     {},
                 ),
                 "win_rule": "mean_difference > 0 and global_bh_q < 0.05",

@@ -416,7 +416,16 @@ file để giữ lại dấu vết thay đổi.
     cả `balanced`, `recent` và `audit`.
   - Các test này không đổi công thức điểm, JSON kết quả hoặc kết luận backtest; chúng
     khóa hành vi chống rò rỉ dữ liệu trong `tests/test_prediction_ledger.py`.
-- [ ] `BACKTEST-006` Tách giai đoạn chọn công thức và giai đoạn đánh giá cuối.
+- [x] `BACKTEST-006` Tách giai đoạn chọn công thức và giai đoạn đánh giá cuối.
+  - Hoàn thành ngày 18/06/2026.
+  - Mỗi report backtest có `phase_split` chia cửa sổ walk-forward theo thời gian:
+    `selection_phase` dùng để khóa/công bố công thức, `final_evaluation_phase` dùng cho
+    `samples`, `target_scope`, baseline và ba comparison công bố.
+  - `finalize_backtests` validate phase trước khi hiệu chỉnh Benjamini-Hochberg và công bố
+    `manifest.backtest_summary.phase_split_validation`.
+  - Website hiển thị dòng "Tách chọn công thức và đánh giá cuối"; tài liệu hóa trong
+    `docs/BACKTEST_PHASE_SPLIT.md` và khóa bằng unit test, documentation test,
+    static-site test.
 - [ ] `BACKTEST-007` Hiệu chỉnh nhiều phép thử trên mọi chiến lược, sản phẩm và biến thể
   tham số đã thử, không chỉ các mô hình cuối được công bố.
 - [ ] `BACKTEST-008` Lưu lại cả thử nghiệm thất bại và cấu hình bị loại.

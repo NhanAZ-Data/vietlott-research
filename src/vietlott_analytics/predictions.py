@@ -46,6 +46,7 @@ BACKTEST_SCOPE_STRATEGIES = (
     "audit_signal",
     "uniform_exact_expectation",
 )
+BACKTEST_SELECTION_PHASE_FRACTION = 0.5
 
 
 @dataclass(slots=True)
@@ -359,12 +360,14 @@ def build_backtest_report(dataset: ProductDataset) -> dict[str, object]:
 def finalize_backtests(product_reports: list[dict[str, Any]]) -> dict[str, Any]:
     comparisons: list[tuple[dict[str, Any], str]] = []
     target_scopes: list[dict[str, Any]] = []
+    phase_splits: list[dict[str, Any]] = []
     completed_products = 0
     for report in product_reports:
         backtest = report.get("backtest")
         if not isinstance(backtest, dict) or backtest.get("status") != "complete":
             continue
         _validate_backtest_target_scope(backtest)
+        _validate_backtest_phase_split(backtest)
         completed_products += 1
         product_slug = str(report["product"]["slug"])
         target_scope = backtest.get("target_scope")
@@ -378,6 +381,29 @@ def finalize_backtests(product_reports: list[dict[str, Any]]) -> dict[str, Any]:
                     "latest_target_draw_id": target_scope.get("latest_target_draw_id"),
                     "target_draw_ids_sha256": target_scope.get(
                         "target_draw_ids_sha256"
+                    ),
+                }
+            )
+        phase_split = backtest.get("phase_split")
+        if isinstance(phase_split, dict):
+            selection_phase = phase_split.get("selection_phase", {})
+            final_phase = phase_split.get("final_evaluation_phase", {})
+            phase_splits.append(
+                {
+                    "product": product_slug,
+                    "method": phase_split.get("method"),
+                    "walk_forward_target_draw_count": phase_split.get(
+                        "walk_forward_target_draw_count"
+                    ),
+                    "selection_draw_count": selection_phase.get("draw_count"),
+                    "final_evaluation_draw_count": final_phase.get("draw_count"),
+                    "selection_scope_id": selection_phase.get("scope_id"),
+                    "final_evaluation_scope_id": final_phase.get("scope_id"),
+                    "target_scope_id": target_scope.get("scope_id")
+                    if isinstance(target_scope, dict)
+                    else None,
+                    "formulas_frozen_before_final_evaluation": phase_split.get(
+                        "formulas_frozen_before_final_evaluation"
                     ),
                 }
             )
@@ -433,6 +459,17 @@ def finalize_backtests(product_reports: list[dict[str, Any]]) -> dict[str, Any]:
                 "và ba phép so sánh ghép cặp."
             ),
         },
+        "phase_split_validation": {
+            "status": "validated",
+            "method": "chronological_formula_selection_then_final_evaluation",
+            "product_count": len(phase_splits),
+            "selection_fraction": BACKTEST_SELECTION_PHASE_FRACTION,
+            "products": phase_splits,
+            "interpretation": (
+                "Mỗi backtest tách phase chọn/khóa công thức khỏi phase đánh giá cuối; "
+                "target_scope công bố trùng phase đánh giá cuối."
+            ),
+        },
         "interpretation": (
             "Chỉ nhãn đã hiệu chỉnh mới được dùng cho kết luận tổng quan. "
             "Nhãn chưa hiệu chỉnh được giữ lại để kiểm tra độ nhạy."
@@ -468,6 +505,72 @@ def _backtest_target_scope(
         },
         "shared_by": list(BACKTEST_SCOPE_STRATEGIES),
         "no_strategy_specific_filtering": True,
+    }
+
+
+def _backtest_phase_split(
+    product: AnalyticsProduct,
+    targets: list[Observation],
+) -> dict[str, Any]:
+    selection_count = 0
+    if len(targets) > 1:
+        selection_count = min(
+            len(targets) - 1,
+            max(1, int(len(targets) * BACKTEST_SELECTION_PHASE_FRACTION)),
+        )
+    selection_targets = targets[:selection_count]
+    final_targets = targets[selection_count:]
+    return {
+        "schema_version": 1,
+        "method": "chronological_formula_selection_then_final_evaluation",
+        "walk_forward_target_draw_count": len(targets),
+        "selection_fraction": BACKTEST_SELECTION_PHASE_FRACTION,
+        "formulas_frozen_before_final_evaluation": True,
+        "selection_result_used_to_choose_formulas": False,
+        "final_evaluation_feedback_used_for_model_selection": False,
+        "shared_by": list(BACKTEST_SCOPE_STRATEGIES),
+        "selection_phase": _backtest_phase_scope(
+            product,
+            "formula_selection",
+            selection_targets,
+        ),
+        "final_evaluation_phase": _backtest_phase_scope(
+            product,
+            "final_evaluation",
+            final_targets,
+        ),
+        "interpretation": (
+            "Nửa đầu cửa sổ walk-forward chỉ dùng để khóa/công bố công thức và kiểm tra "
+            "chẩn đoán. Kết luận backtest công bố chỉ dùng phase đánh giá cuối."
+        ),
+    }
+
+
+def _backtest_phase_scope(
+    product: AnalyticsProduct,
+    phase: str,
+    targets: list[Observation],
+) -> dict[str, Any]:
+    digest = hashlib.sha256()
+    digest.update(f"{product.slug}|{len(targets)}\n".encode())
+    for target in targets:
+        digest.update(f"{target.draw_id}|{target.draw_date.isoformat()}\n".encode())
+    target_ids = [target.draw_id for target in targets]
+    target_dates = [target.draw_date.isoformat() for target in targets]
+    target_hash = digest.hexdigest()
+    return {
+        "phase": phase,
+        "scope_id": target_hash[:24],
+        "draw_count": len(targets),
+        "first_draw_id": target_ids[0] if target_ids else None,
+        "latest_draw_id": target_ids[-1] if target_ids else None,
+        "first_draw_date": target_dates[0] if target_dates else None,
+        "latest_draw_date": target_dates[-1] if target_dates else None,
+        "draw_ids_sha256": target_hash,
+        "sample_draw_ids": {
+            "first": target_ids[:5],
+            "last": target_ids[-5:],
+        },
     }
 
 
@@ -629,6 +732,38 @@ def _validate_backtest_target_scope(backtest: dict[str, Any]) -> None:
             raise ValueError(f"Backtest {key} target_scope_id mismatch")
         if row.get("target_draw_count") != expected_count:
             raise ValueError(f"Backtest {key} target_draw_count mismatch")
+
+
+def _validate_backtest_phase_split(backtest: dict[str, Any]) -> None:
+    phase_split = backtest.get("phase_split")
+    target_scope = backtest.get("target_scope")
+    if not isinstance(phase_split, dict):
+        raise ValueError("Backtest phase_split missing")
+    if not isinstance(target_scope, dict):
+        raise ValueError("Backtest target_scope missing")
+    selection_phase = phase_split.get("selection_phase")
+    final_phase = phase_split.get("final_evaluation_phase")
+    if not isinstance(selection_phase, dict) or not isinstance(final_phase, dict):
+        raise ValueError("Backtest phase_split phases missing")
+    selection_count = int(selection_phase.get("draw_count", -1))
+    final_count = int(final_phase.get("draw_count", -1))
+    total_count = int(phase_split.get("walk_forward_target_draw_count", -1))
+    if selection_count < 0 or final_count <= 0:
+        raise ValueError("Backtest phase_split draw_count invalid")
+    if selection_count + final_count != total_count:
+        raise ValueError("Backtest phase_split draw_count mismatch")
+    if final_phase.get("scope_id") != target_scope.get("scope_id"):
+        raise ValueError("Backtest final phase target_scope_id mismatch")
+    if final_count != target_scope.get("target_draw_count"):
+        raise ValueError("Backtest final phase target_draw_count mismatch")
+    if backtest.get("samples") != final_count:
+        raise ValueError("Backtest samples final phase mismatch")
+    if phase_split.get("formulas_frozen_before_final_evaluation") is not True:
+        raise ValueError("Backtest formulas must be frozen before final evaluation")
+    if phase_split.get("selection_result_used_to_choose_formulas") is not False:
+        raise ValueError("Backtest selection phase must not choose final formulas")
+    if phase_split.get("final_evaluation_feedback_used_for_model_selection") is not False:
+        raise ValueError("Backtest final evaluation feedback must not choose formulas")
 
 
 def _forecast_events(dataset: ProductDataset) -> list[dict[str, Any]]:
@@ -852,7 +987,16 @@ def _number_backtest(dataset: ProductDataset) -> dict[str, object]:
     start = max(minimum_history, len(observations) - limit)
     if start >= len(observations):
         return {"status": "insufficient_data", "samples": 0}
-    target_scope = _backtest_target_scope(product, observations[start:])
+    walk_forward_targets = observations[start:]
+    phase_split = _backtest_phase_split(product, walk_forward_targets)
+    evaluation_start_offset = phase_split["selection_phase"]["draw_count"]
+    evaluation_start_index = start + evaluation_start_offset
+    evaluation_targets = walk_forward_targets[evaluation_start_offset:]
+    target_scope = _backtest_target_scope(product, evaluation_targets)
+    phase_split["final_evaluation_phase"]["scope_id"] = target_scope["scope_id"]
+    phase_split["final_evaluation_phase"]["draw_ids_sha256"] = target_scope[
+        "target_draw_ids_sha256"
+    ]
     scope_fields = _target_scope_fields(target_scope)
 
     recent_window = 500 if product.slug == "keno" else 200
@@ -877,9 +1021,6 @@ def _number_backtest(dataset: ProductDataset) -> dict[str, object]:
     differences: list[float] = []
     recent_differences: list[float] = []
     audit_differences: list[float] = []
-    model_distribution = Counter()
-    recent_distribution = Counter()
-    audit_distribution = Counter()
     expected_hits = (product.pick_count or 0) ** 2 / product.pool_size
     for index in range(start, len(observations)):
         target = observations[index]
@@ -924,9 +1065,6 @@ def _number_backtest(dataset: ProductDataset) -> dict[str, object]:
         differences.append(float(model_hit - expected_hits))
         recent_differences.append(float(recent_hit - expected_hits))
         audit_differences.append(float(audit_hit - expected_hits))
-        model_distribution[model_hit] += 1
-        recent_distribution[recent_hit] += 1
-        audit_distribution[audit_hit] += 1
 
         total_counts.update(target.values)
         for value in target.values:
@@ -947,38 +1085,51 @@ def _number_backtest(dataset: ProductDataset) -> dict[str, object]:
             expired_pair = pair_items.popleft()
             _update_number_pair_counts(pair_counts, expired_pair, -1)
 
-    z_score, p_value = _paired_normal_test(differences)
-    recent_z_score, recent_p_value = _paired_normal_test(recent_differences)
-    audit_z_score, audit_p_value = _paired_normal_test(audit_differences)
-    difference_interval = _normal_mean_interval(differences)
-    recent_difference_interval = _normal_mean_interval(recent_differences)
-    audit_difference_interval = _normal_mean_interval(audit_differences)
+    evaluation_model_hits = model_hits[evaluation_start_offset:]
+    evaluation_recent_hits = recent_hits[evaluation_start_offset:]
+    evaluation_audit_hits = audit_hits[evaluation_start_offset:]
+    evaluation_differences = differences[evaluation_start_offset:]
+    evaluation_recent_differences = recent_differences[evaluation_start_offset:]
+    evaluation_audit_differences = audit_differences[evaluation_start_offset:]
+    evaluation_model_distribution = Counter(evaluation_model_hits)
+    evaluation_recent_distribution = Counter(evaluation_recent_hits)
+    evaluation_audit_distribution = Counter(evaluation_audit_hits)
+    z_score, p_value = _paired_normal_test(evaluation_differences)
+    recent_z_score, recent_p_value = _paired_normal_test(evaluation_recent_differences)
+    audit_z_score, audit_p_value = _paired_normal_test(evaluation_audit_differences)
+    difference_interval = _normal_mean_interval(evaluation_differences)
+    recent_difference_interval = _normal_mean_interval(evaluation_recent_differences)
+    audit_difference_interval = _normal_mean_interval(evaluation_audit_differences)
     baseline_distribution = _number_uniform_distribution(
         product.pool_size,
         product.pick_count or 0,
-        len(model_hits),
+        len(evaluation_model_hits),
     )
     partial_match_baseline = _number_partial_match_baseline(
         product,
-        len(model_hits),
+        len(evaluation_model_hits),
         baseline_distribution,
     )
     exact_probability = 1 / math.comb(product.pool_size, product.pick_count or 0)
-    comparison_wins = fmean(differences) > 0 and p_value < 0.05
+    comparison_wins = fmean(evaluation_differences) > 0 and p_value < 0.05
     recent_comparison_wins = (
-        fmean(recent_differences) > 0 and recent_p_value < 0.05
+        fmean(evaluation_recent_differences) > 0 and recent_p_value < 0.05
     )
-    audit_comparison_wins = fmean(audit_differences) > 0 and audit_p_value < 0.05
+    audit_comparison_wins = fmean(evaluation_audit_differences) > 0 and audit_p_value < 0.05
     report = {
         "schema_version": 2,
         "status": "complete",
         "method": "walk_forward",
-        "samples": len(model_hits),
+        "samples": len(evaluation_model_hits),
+        "walk_forward_samples": len(model_hits),
         "target_scope": target_scope,
+        "phase_split": phase_split,
         "score_formulas": _number_backtest_score_formulas(),
-        "first_test_draw_id": observations[start].draw_id,
+        "first_walk_forward_draw_id": observations[start].draw_id,
+        "first_test_draw_id": observations[evaluation_start_index].draw_id,
         "latest_test_draw_id": observations[-1].draw_id,
-        "initial_training_draws": start,
+        "initial_training_draws": evaluation_start_index,
+        "initial_walk_forward_training_draws": start,
         "minimum_history_draws": minimum_history,
         "recent_window_draws": recent_window,
         "short_window_draws": short_window,
@@ -988,23 +1139,23 @@ def _number_backtest(dataset: ProductDataset) -> dict[str, object]:
         "model": {
             "strategy": "balanced_signal",
             **scope_fields,
-            "average_hits": _round(fmean(model_hits)),
-            "exact_hits": model_distribution[product.pick_count or 0],
-            "hit_distribution": _counter_to_rows(model_distribution),
+            "average_hits": _round(fmean(evaluation_model_hits)),
+            "exact_hits": evaluation_model_distribution[product.pick_count or 0],
+            "hit_distribution": _counter_to_rows(evaluation_model_distribution),
         },
         "recent_model": {
             "strategy": "recent_frequency",
             **scope_fields,
-            "average_hits": _round(fmean(recent_hits)),
-            "exact_hits": recent_distribution[product.pick_count or 0],
-            "hit_distribution": _counter_to_rows(recent_distribution),
+            "average_hits": _round(fmean(evaluation_recent_hits)),
+            "exact_hits": evaluation_recent_distribution[product.pick_count or 0],
+            "hit_distribution": _counter_to_rows(evaluation_recent_distribution),
         },
         "audit_model": {
             "strategy": "audit_signal",
             **scope_fields,
-            "average_hits": _round(fmean(audit_hits)),
-            "exact_hits": audit_distribution[product.pick_count or 0],
-            "hit_distribution": _counter_to_rows(audit_distribution),
+            "average_hits": _round(fmean(evaluation_audit_hits)),
+            "exact_hits": evaluation_audit_distribution[product.pick_count or 0],
+            "hit_distribution": _counter_to_rows(evaluation_audit_distribution),
         },
         "baseline": {
             "strategy": "uniform_exact_expectation",
@@ -1012,14 +1163,14 @@ def _number_backtest(dataset: ProductDataset) -> dict[str, object]:
             **scope_fields,
             "average_hits": _round(expected_hits),
             "expected_average_hits": _round(expected_hits),
-            "expected_exact_hits": _round(len(model_hits) * exact_probability),
+            "expected_exact_hits": _round(len(evaluation_model_hits) * exact_probability),
             "exact_hit_probability": _round(exact_probability, 12),
             "hit_distribution": baseline_distribution,
             "partial_match_baseline": partial_match_baseline,
         },
         "comparison": {
             **scope_fields,
-            "mean_hit_difference": _round(fmean(differences)),
+            "mean_hit_difference": _round(fmean(evaluation_differences)),
             "paired_z_score": _round(z_score),
             "approximate_p_value": _round(p_value, 8),
             **difference_interval,
@@ -1028,7 +1179,7 @@ def _number_backtest(dataset: ProductDataset) -> dict[str, object]:
         },
         "recent_comparison": {
             **scope_fields,
-            "mean_hit_difference": _round(fmean(recent_differences)),
+            "mean_hit_difference": _round(fmean(evaluation_recent_differences)),
             "paired_z_score": _round(recent_z_score),
             "approximate_p_value": _round(recent_p_value, 8),
             **recent_difference_interval,
@@ -1037,7 +1188,7 @@ def _number_backtest(dataset: ProductDataset) -> dict[str, object]:
         },
         "audit_comparison": {
             **scope_fields,
-            "mean_hit_difference": _round(fmean(audit_differences)),
+            "mean_hit_difference": _round(fmean(evaluation_audit_differences)),
             "paired_z_score": _round(audit_z_score),
             "approximate_p_value": _round(audit_p_value, 8),
             **audit_difference_interval,
@@ -1062,7 +1213,16 @@ def _digit_backtest(dataset: ProductDataset) -> dict[str, object]:
     start = max(minimum_history, len(observations) - limit)
     if start >= len(observations):
         return {"status": "insufficient_data", "samples": 0}
-    target_scope = _backtest_target_scope(product, observations[start:])
+    walk_forward_targets = observations[start:]
+    phase_split = _backtest_phase_split(product, walk_forward_targets)
+    evaluation_start_offset = phase_split["selection_phase"]["draw_count"]
+    evaluation_start_index = start + evaluation_start_offset
+    evaluation_targets = walk_forward_targets[evaluation_start_offset:]
+    target_scope = _backtest_target_scope(product, evaluation_targets)
+    phase_split["final_evaluation_phase"]["scope_id"] = target_scope["scope_id"]
+    phase_split["final_evaluation_phase"]["draw_ids_sha256"] = target_scope[
+        "target_draw_ids_sha256"
+    ]
     scope_fields = _target_scope_fields(target_scope)
 
     length = product.sequence_length or 0
@@ -1081,15 +1241,15 @@ def _digit_backtest(dataset: ProductDataset) -> dict[str, object]:
     for item in short_items:
         _update_digit_counts(short, item.outcomes, 1)
 
-    model_exact = 0
-    recent_exact = 0
-    audit_exact = 0
+    model_exact_flags: list[bool] = []
+    recent_exact_flags: list[bool] = []
+    audit_exact_flags: list[bool] = []
     model_best: list[int] = []
     recent_best: list[int] = []
     audit_best: list[int] = []
     baseline_best_expected: list[float] = []
     baseline_exact_expected: list[float] = []
-    baseline_distribution: Counter[int] = Counter()
+    baseline_score_distributions: list[dict[int, float]] = []
     for index in range(start, len(observations)):
         target = observations[index]
         seed = f"backtest|{product.slug}|{target.draw_id}|{MODEL_VERSION}"
@@ -1116,16 +1276,15 @@ def _digit_backtest(dataset: ProductDataset) -> dict[str, object]:
             expected_exact_probability,
             expected_score_distribution,
         ) = _digit_uniform_expectation(actual, symbols, length)
-        model_exact += model in actual
-        recent_exact += recent_model in actual
-        audit_exact += audit_model in actual
+        model_exact_flags.append(model in actual)
+        recent_exact_flags.append(recent_model in actual)
+        audit_exact_flags.append(audit_model in actual)
         model_best.append(_best_position_match(model, actual))
         recent_best.append(_best_position_match(recent_model, actual))
         audit_best.append(_best_position_match(audit_model, actual))
         baseline_best_expected.append(expected_best_match)
         baseline_exact_expected.append(expected_exact_probability)
-        for score, probability in expected_score_distribution.items():
-            baseline_distribution[score] += probability
+        baseline_score_distributions.append(expected_score_distribution)
 
         _update_digit_counts(total, target.outcomes, 1)
         recent_items.append(target)
@@ -1140,22 +1299,42 @@ def _digit_backtest(dataset: ProductDataset) -> dict[str, object]:
             expired_short = short_items.popleft()
             _update_digit_counts(short, expired_short.outcomes, -1)
 
-    samples = len(model_best)
+    evaluation_model_exact = sum(model_exact_flags[evaluation_start_offset:])
+    evaluation_recent_exact = sum(recent_exact_flags[evaluation_start_offset:])
+    evaluation_audit_exact = sum(audit_exact_flags[evaluation_start_offset:])
+    evaluation_model_best = model_best[evaluation_start_offset:]
+    evaluation_recent_best = recent_best[evaluation_start_offset:]
+    evaluation_audit_best = audit_best[evaluation_start_offset:]
+    evaluation_baseline_best_expected = baseline_best_expected[evaluation_start_offset:]
+    evaluation_baseline_exact_expected = baseline_exact_expected[evaluation_start_offset:]
+    evaluation_baseline_distribution: Counter[int] = Counter()
+    for distribution in baseline_score_distributions[evaluation_start_offset:]:
+        for score, probability in distribution.items():
+            evaluation_baseline_distribution[score] += probability
+    samples = len(evaluation_model_best)
     differences = [
         float(model - baseline)
-        for model, baseline in zip(model_best, baseline_best_expected, strict=True)
+        for model, baseline in zip(
+            evaluation_model_best,
+            evaluation_baseline_best_expected,
+            strict=True,
+        )
     ]
     recent_differences = [
         float(model - baseline)
         for model, baseline in zip(
-            recent_best,
-            baseline_best_expected,
+            evaluation_recent_best,
+            evaluation_baseline_best_expected,
             strict=True,
         )
     ]
     audit_differences = [
         float(model - baseline)
-        for model, baseline in zip(audit_best, baseline_best_expected, strict=True)
+        for model, baseline in zip(
+            evaluation_audit_best,
+            evaluation_baseline_best_expected,
+            strict=True,
+        )
     ]
     z_score, p_value = _paired_normal_test(differences)
     recent_z_score, recent_p_value = _paired_normal_test(recent_differences)
@@ -1173,11 +1352,15 @@ def _digit_backtest(dataset: ProductDataset) -> dict[str, object]:
         "status": "complete",
         "method": "walk_forward",
         "samples": samples,
+        "walk_forward_samples": len(model_best),
         "target_scope": target_scope,
+        "phase_split": phase_split,
         "score_formulas": _digit_backtest_score_formulas(),
-        "first_test_draw_id": observations[start].draw_id,
+        "first_walk_forward_draw_id": observations[start].draw_id,
+        "first_test_draw_id": observations[evaluation_start_index].draw_id,
         "latest_test_draw_id": observations[-1].draw_id,
-        "initial_training_draws": start,
+        "initial_training_draws": evaluation_start_index,
+        "initial_walk_forward_training_draws": start,
         "minimum_history_draws": minimum_history,
         "recent_window_draws": recent_window,
         "short_window_draws": short_window,
@@ -1188,38 +1371,40 @@ def _digit_backtest(dataset: ProductDataset) -> dict[str, object]:
         "model": {
             "strategy": "balanced_signal",
             **scope_fields,
-            "exact_hits": model_exact,
-            "exact_hit_rate": _round(model_exact / samples),
-            "average_best_position_matches": _round(fmean(model_best)),
+            "exact_hits": evaluation_model_exact,
+            "exact_hit_rate": _round(evaluation_model_exact / samples),
+            "average_best_position_matches": _round(fmean(evaluation_model_best)),
         },
         "recent_model": {
             "strategy": "recent_frequency",
             **scope_fields,
-            "exact_hits": recent_exact,
-            "exact_hit_rate": _round(recent_exact / samples),
-            "average_best_position_matches": _round(fmean(recent_best)),
+            "exact_hits": evaluation_recent_exact,
+            "exact_hit_rate": _round(evaluation_recent_exact / samples),
+            "average_best_position_matches": _round(fmean(evaluation_recent_best)),
         },
         "audit_model": {
             "strategy": "audit_signal",
             **scope_fields,
-            "exact_hits": audit_exact,
-            "exact_hit_rate": _round(audit_exact / samples),
-            "average_best_position_matches": _round(fmean(audit_best)),
+            "exact_hits": evaluation_audit_exact,
+            "exact_hit_rate": _round(evaluation_audit_exact / samples),
+            "average_best_position_matches": _round(fmean(evaluation_audit_best)),
         },
         "baseline": {
             "strategy": "uniform_exact_expectation",
             "method": "exact_sequence_enumeration",
             **scope_fields,
             "candidate_space_size": len(symbols) ** length,
-            "expected_exact_hits": _round(sum(baseline_exact_expected)),
-            "expected_exact_hit_rate": _round(fmean(baseline_exact_expected)),
-            "average_best_position_matches": _round(fmean(baseline_best_expected)),
+            "expected_exact_hits": _round(sum(evaluation_baseline_exact_expected)),
+            "expected_exact_hit_rate": _round(fmean(evaluation_baseline_exact_expected)),
+            "average_best_position_matches": _round(
+                fmean(evaluation_baseline_best_expected)
+            ),
             "score_distribution": _expected_counter_to_rows(
-                baseline_distribution,
+                evaluation_baseline_distribution,
                 samples,
             ),
             "partial_match_baseline": _digit_partial_match_baseline(
-                baseline_distribution,
+                evaluation_baseline_distribution,
                 samples,
                 length,
                 len(symbols) ** length,

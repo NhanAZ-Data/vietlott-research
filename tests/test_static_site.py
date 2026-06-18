@@ -20,7 +20,7 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert 'id="phan-tich"' in index
     assert 'id="du-doan"' in index
     assert 'id="kiem-dinh"' in index
-    assert "assets/app.js?v=20260618-7" in index
+    assert "assets/app.js?v=20260618-8" in index
     assert "archive-summary-heading" in index
     assert "Sổ dự đoán toàn hệ thống" in index
     assert "assets/docs.js?v=20260618-2" in data_page
@@ -131,10 +131,13 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert "Backtest đang chạy chính xác những gì" in method_page
     assert "Kiểm định chênh lệch ghép cặp" in method_page
     assert "phân bố siêu bội chính xác" in method_page
+    assert "phase đánh giá cuối" in method_page
     assert "Tập kỳ mục tiêu chung" in app_script
     assert "target_scope" in app_script
     assert "renderBacktestScoreFormulas" in app_script
     assert "renderBacktestPartialBaseline" in app_script
+    assert "renderBacktestPhaseSplit" in app_script
+    assert "Tách chọn công thức và đánh giá cuối" in app_script
     assert "Baseline trùng một phần" in app_script
     assert "Thước đo riêng" in app_script
     assert "Ba chiến lược ứng viên" in method_page
@@ -205,6 +208,13 @@ def test_generated_site_data_matches_manifest() -> None:
     assert target_scope_validation["status"] == "validated"
     assert target_scope_validation["product_count"] == len(manifest["products"])
     assert target_scope_validation["method"] == "shared_target_scope_id_per_product"
+    phase_split_validation = manifest["backtest_summary"]["phase_split_validation"]
+    assert phase_split_validation["status"] == "validated"
+    assert phase_split_validation["product_count"] == len(manifest["products"])
+    assert (
+        phase_split_validation["method"]
+        == "chronological_formula_selection_then_final_evaluation"
+    )
     assert predictions["model_version"]
     assert predictions["ledger_integrity"]["status"] == "valid"
     assert predictions["ledger_integrity"]["event_count"] > 0
@@ -435,6 +445,24 @@ def test_generated_site_data_matches_manifest() -> None:
         assert target_scope["target_draw_count"] == report["backtest"]["samples"]
         assert target_scope["no_strategy_specific_filtering"] is True
         assert len(target_scope["target_draw_ids_sha256"]) == 64
+        phase_split = report["backtest"]["phase_split"]
+        assert (
+            phase_split["method"]
+            == "chronological_formula_selection_then_final_evaluation"
+        )
+        assert phase_split["formulas_frozen_before_final_evaluation"] is True
+        assert phase_split["selection_result_used_to_choose_formulas"] is False
+        assert phase_split["final_evaluation_phase"]["draw_count"] == report[
+            "backtest"
+        ]["samples"]
+        assert phase_split["final_evaluation_phase"]["scope_id"] == target_scope[
+            "scope_id"
+        ]
+        assert (
+            phase_split["selection_phase"]["draw_count"]
+            + phase_split["final_evaluation_phase"]["draw_count"]
+            == report["backtest"]["walk_forward_samples"]
+        )
         for key in (
             "model",
             "recent_model",

@@ -48,6 +48,11 @@ backtest hoặc cách đọc website. Thay đổi giao diện thuần túy khôn
   kỳ vọng cho trùng một phần, gần đúng và không trùng gì trên đúng tập kỳ
   walk-forward đã khóa; trường này không đổi p-value, q-value hoặc kết luận
   thắng baseline
+- Thêm `backtest.phase_split`, tách nửa đầu cửa sổ walk-forward làm phase
+  chọn/khóa công thức và nửa sau làm phase đánh giá cuối; `backtest.samples`,
+  `target_scope`, baseline và ba comparison công bố chỉ dùng phase đánh giá cuối
+- `manifest.backtest_summary.phase_split_validation` công bố trạng thái validate
+  phase toàn hệ thống và bắt phase đánh giá cuối trùng `target_scope`
 
 ## 15/06/2026
 

@@ -209,12 +209,29 @@ def test_walk_forward_backtest_reports_uniform_baseline() -> None:
     assert report["status"] == "complete"
     assert report["method"] == "walk_forward"
     assert report["samples"] > 0
+    assert report["walk_forward_samples"] > report["samples"]
     target_scope = report["target_scope"]
     assert target_scope["method"] == "same_confirmed_draw_targets_for_all_strategies"
     assert target_scope["target_draw_count"] == report["samples"]
     assert target_scope["first_target_draw_id"] == report["first_test_draw_id"]
     assert target_scope["latest_target_draw_id"] == report["latest_test_draw_id"]
     assert target_scope["no_strategy_specific_filtering"] is True
+    phase_split = report["phase_split"]
+    assert phase_split["method"] == "chronological_formula_selection_then_final_evaluation"
+    assert phase_split["formulas_frozen_before_final_evaluation"] is True
+    assert phase_split["selection_result_used_to_choose_formulas"] is False
+    assert phase_split["final_evaluation_feedback_used_for_model_selection"] is False
+    assert (
+        phase_split["selection_phase"]["draw_count"]
+        + phase_split["final_evaluation_phase"]["draw_count"]
+        == report["walk_forward_samples"]
+    )
+    assert phase_split["final_evaluation_phase"]["draw_count"] == report["samples"]
+    assert phase_split["final_evaluation_phase"]["scope_id"] == target_scope["scope_id"]
+    assert (
+        phase_split["final_evaluation_phase"]["draw_ids_sha256"]
+        == target_scope["target_draw_ids_sha256"]
+    )
     assert report["baseline"]["strategy"] == "uniform_exact_expectation"
     assert report["baseline"]["method"] == "exact_hypergeometric_expectation"
     assert report["baseline"]["average_hits"] == 0.8
@@ -387,6 +404,13 @@ def test_digit_walk_forward_backtest_reports_digit_score_formula() -> None:
     report = build_backtest_report(_digit_dataset(160))
 
     assert report["status"] == "complete"
+    assert report["walk_forward_samples"] > report["samples"]
+    assert report["phase_split"]["final_evaluation_phase"]["draw_count"] == report[
+        "samples"
+    ]
+    assert report["phase_split"]["final_evaluation_phase"]["scope_id"] == report[
+        "target_scope"
+    ]["scope_id"]
     assert report["baseline"]["method"] == "exact_sequence_enumeration"
     partial_baseline = report["baseline"]["partial_match_baseline"]
     assert partial_baseline["method"] == "exact_sequence_enumeration"
@@ -432,6 +456,27 @@ def test_digit_uniform_expectation_enumerates_complete_space() -> None:
     }
 
 
+def _mock_phase_split(scope_id: str, final_count: int) -> dict[str, object]:
+    return {
+        "method": "chronological_formula_selection_then_final_evaluation",
+        "walk_forward_target_draw_count": final_count + 5,
+        "selection_fraction": 0.5,
+        "formulas_frozen_before_final_evaluation": True,
+        "selection_result_used_to_choose_formulas": False,
+        "final_evaluation_feedback_used_for_model_selection": False,
+        "selection_phase": {
+            "phase": "formula_selection",
+            "scope_id": "selection-scope",
+            "draw_count": 5,
+        },
+        "final_evaluation_phase": {
+            "phase": "final_evaluation",
+            "scope_id": scope_id,
+            "draw_count": final_count,
+        },
+    }
+
+
 def test_finalize_backtests_applies_global_bh_correction() -> None:
     scope = {
         "scope_id": "scope-a",
@@ -443,7 +488,9 @@ def test_finalize_backtests_applies_global_bh_correction() -> None:
             "product": {"slug": "first"},
             "backtest": {
                 "status": "complete",
+                "samples": 10,
                 "target_scope": scope,
+                "phase_split": _mock_phase_split("scope-a", 10),
                 "comparison": {
                     "mean_hit_difference": 0.1,
                     "approximate_p_value": 0.01,
@@ -462,7 +509,9 @@ def test_finalize_backtests_applies_global_bh_correction() -> None:
             "product": {"slug": "second"},
             "backtest": {
                 "status": "complete",
+                "samples": 10,
                 "target_scope": scope,
+                "phase_split": _mock_phase_split("scope-a", 10),
                 "comparison": {
                     "mean_position_match_difference": 0.1,
                     "approximate_p_value": 0.06,
@@ -484,6 +533,8 @@ def test_finalize_backtests_applies_global_bh_correction() -> None:
     assert summary["comparison_count"] == 4
     assert summary["target_scope_validation"]["status"] == "validated"
     assert summary["target_scope_validation"]["product_count"] == 2
+    assert summary["phase_split_validation"]["status"] == "validated"
+    assert summary["phase_split_validation"]["product_count"] == 2
     assert summary["unadjusted_winning_comparisons"] == 2
     assert summary["adjusted_winning_comparisons"] == 1
     assert summary["products_with_adjusted_win"] == ["first"]
@@ -499,6 +550,15 @@ def test_finalize_backtests_rejects_target_scope_mismatch() -> None:
     broken["recent_comparison"]["target_scope_id"] = "different-scope"
 
     with pytest.raises(ValueError, match="target_scope_id mismatch"):
+        finalize_backtests([{"product": {"slug": "mega645"}, "backtest": broken}])
+
+
+def test_finalize_backtests_rejects_phase_split_mismatch() -> None:
+    report = build_backtest_report(_dataset(160))
+    broken = deepcopy(report)
+    broken["phase_split"]["final_evaluation_phase"]["scope_id"] = "different-scope"
+
+    with pytest.raises(ValueError, match="final phase target_scope_id mismatch"):
         finalize_backtests([{"product": {"slug": "mega645"}, "backtest": broken}])
 
 

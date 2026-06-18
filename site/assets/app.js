@@ -1657,6 +1657,7 @@ function renderBacktest(backtest, kind) {
       ? "Có tín hiệu với p thô dưới 0,05, nhưng tín hiệu không còn đủ mạnh sau khi hiệu chỉnh toàn hệ thống."
       : "Kết luận: các chiến lược hiện tại chưa tốt hơn cách chọn đồng đều một cách đáng tin cậy.";
   const scoreDescription = renderBacktestScoreFormulas(backtest.score_formulas, kind);
+  const phaseDescription = renderBacktestPhaseSplit(backtest.phase_split);
   container.innerHTML = `
     <div class="backtest-score">
       ${modelRows.map((row) => {
@@ -1703,6 +1704,7 @@ function renderBacktest(backtest, kind) {
           <li><strong>Chia dữ liệu theo thời gian</strong><span>Tại kỳ t, thuật toán chỉ nhìn các kỳ trước t. Sau khi chấm xong kỳ t, kết quả kỳ đó mới được thêm vào lịch sử để dự đoán kỳ kế tiếp.</span></li>
           <li><strong>Phạm vi kiểm tra</strong><span>${numberFormatter.format(backtest.samples)} kỳ, từ mã kỳ ${escapeHtml(backtest.first_test_draw_id)} đến ${escapeHtml(backtest.latest_test_draw_id)}. Trước kỳ kiểm tra đầu có ${numberFormatter.format(backtest.initial_training_draws)} kỳ lịch sử. Cửa sổ ngắn ${numberFormatter.format(backtest.short_window_draws)} kỳ, cửa sổ gần ${numberFormatter.format(backtest.recent_window_draws)} kỳ${backtest.pair_window_draws ? `, cửa sổ cặp ${numberFormatter.format(backtest.pair_window_draws)} kỳ` : ""}.</span></li>
           <li><strong>Tập kỳ mục tiêu chung</strong><span>Baseline, ba chiến lược và ba phép so sánh cùng dùng ${numberFormatter.format(targetScope.target_draw_count || backtest.samples)} kỳ mục tiêu. Scope ${escapeHtml(targetScope.scope_id || "chưa công bố")} khóa bằng hash danh sách mã kỳ.</span></li>
+          ${phaseDescription}
           ${scoreDescription}
           <li><strong>Baseline đồng đều chính xác</strong><span>Với tập số, kỳ vọng và phân bố số trùng được tính bằng phân bố siêu bội. Với chuỗi chữ số, chương trình đếm chính xác toàn bộ không gian chuỗi hợp lệ của từng kỳ. Kết quả không phụ thuộc seed.</span></li>
           <li><strong>So sánh theo từng kỳ</strong><span>Với mỗi kỳ tính d = điểm chiến lược - điểm kỳ vọng đồng đều. Báo cáo lấy trung bình d và tính z = trung bình(d) / (độ lệch chuẩn(d) / √n), rồi lấy p hai phía từ phân bố chuẩn.</span></li>
@@ -1716,6 +1718,21 @@ function renderBacktest(backtest, kind) {
         </p>
       </div>
     </details>`;
+}
+
+function renderBacktestPhaseSplit(phaseSplit) {
+  if (!phaseSplit) return "";
+  const selection = phaseSplit.selection_phase || {};
+  const evaluation = phaseSplit.final_evaluation_phase || {};
+  const total = phaseSplit.walk_forward_target_draw_count
+    || ((selection.draw_count || 0) + (evaluation.draw_count || 0));
+  return `
+    <li><strong>Tách chọn công thức và đánh giá cuối</strong><span>
+      ${numberFormatter.format(selection.draw_count || 0)} kỳ đầu dùng để khóa/công bố công thức,
+      ${numberFormatter.format(evaluation.draw_count || 0)} kỳ sau là phase đánh giá cuối.
+      Tổng cửa sổ walk-forward ${numberFormatter.format(total)} kỳ; scope đánh giá cuối
+      ${escapeHtml(evaluation.scope_id || "chưa công bố")} trùng với target_scope.
+    </span></li>`;
 }
 
 function renderBacktestPartialBaseline(baseline) {
