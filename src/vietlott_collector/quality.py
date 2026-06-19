@@ -21,11 +21,8 @@ PARSER_VERSION = "0.2.0"
 MANIFEST_TEXT_SUFFIXES = {".csv", ".json", ".jsonl", ".md", ".py", ".yml", ".yaml", ".txt"}
 METHODOLOGY_VERSIONS = {
     "data_quality": QUALITY_REPORT_VERSION,
-    "descriptive_statistics": "1.0.0",
-    "fairness_audit": "2.0.0",
-    "backtest": "2.0.0",
-    "prediction_ledger": "3.0.0",
-    "weather": "1.0.0",
+    "collector": PARSER_VERSION,
+    "repository_snapshot": "1.0.0",
 }
 
 

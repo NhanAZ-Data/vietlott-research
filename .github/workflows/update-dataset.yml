@@ -14,8 +14,6 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 concurrency:
   group: vietlott-dataset-update
@@ -27,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     outputs:
-      site_changed: ${{ steps.commit.outputs.changed }}
+      data_changed: ${{ steps.commit.outputs.changed }}
     env:
       PYTHONUNBUFFERED: "1"
       PIP_DISABLE_PIP_VERSION_CHECK: "1"
@@ -57,10 +55,7 @@ jobs:
           for file in \
             datasets/metadata/dataset-summary.json \
             datasets/metadata/quality-report.json \
-            datasets/metadata/snapshot-manifest.json \
-            site/data/audit-summary.json \
-            site/data/manifest.json \
-            site/data/predictions.json; do
+            datasets/metadata/snapshot-manifest.json; do
             if test -f "$file"; then
               cp "$file" "$before_dir/$(basename "$file")"
             fi
@@ -104,19 +99,11 @@ jobs:
           vietlott-repository-data audit \
             --source-dir datasets \
             > "$report_dir/quality-audit.json"
-          vietlott-research-report \
-            --datasets-dir datasets \
-            --site-dir site \
-            --prediction-ledger predictions/ledger.jsonl \
-            > "$report_dir/research-report.json"
           after_dir="$report_dir/after"
           mkdir -p "$after_dir"
           cp datasets/metadata/dataset-summary.json "$after_dir/"
           cp datasets/metadata/quality-report.json "$after_dir/"
           cp datasets/metadata/snapshot-manifest.json "$after_dir/"
-          cp site/data/audit-summary.json "$after_dir/"
-          cp site/data/manifest.json "$after_dir/"
-          cp site/data/predictions.json "$after_dir/"
           python scripts/check_quality_regressions.py \
             --before "$report_dir/before/quality-report.json" \
             --after datasets/metadata/quality-report.json \
@@ -152,7 +139,7 @@ jobs:
           fi
 
           patch_file="$RUNNER_TEMP/vietlott-data-update.patch"
-          git diff --binary -- datasets predictions > "$patch_file"
+          git diff --binary -- datasets > "$patch_file"
           git reset --hard origin/main
 
           if test -s "$patch_file"; then
@@ -168,17 +155,12 @@ jobs:
           vietlott-repository-data audit \
             --source-dir datasets \
             > "$report_dir/quality-audit-after-main-sync.json"
-          vietlott-research-report \
-            --datasets-dir datasets \
-            --site-dir site \
-            --prediction-ledger predictions/ledger.jsonl \
-            > "$report_dir/research-report-after-main-sync.json"
 
       - name: Commit khi dữ liệu thay đổi
         id: commit
         shell: bash
         run: |
-          git add datasets predictions site/data
+          git add datasets
           if git diff --cached --quiet; then
             echo "Không có kỳ mới hoặc thay đổi chính thức"
             echo "changed=false" >> "$GITHUB_OUTPUT"
