@@ -3595,18 +3595,17 @@ a {
 
 .prediction-product-metrics {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
-  gap: 1px;
-  overflow: hidden;
-  border-radius: 16px;
-  background: rgb(255 255 255 / 12%);
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
 }
 
 .prediction-product-metric {
   min-width: 0;
+  min-height: 126px;
   padding: 16px;
-  border: 0;
-  background: #173635;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 14px;
+  background: rgb(23 54 53 / 92%);
   color: inherit;
   cursor: pointer;
   font: inherit;
@@ -3624,8 +3623,9 @@ a {
 button.prediction-product-metric:hover,
 button.prediction-product-metric:focus-visible {
   background: #1c4240;
+  border-color: rgb(212 255 91 / 38%);
   outline: 2px solid rgb(212 255 91 / 54%);
-  outline-offset: -2px;
+  outline-offset: 2px;
 }
 
 .prediction-product-metrics span,
