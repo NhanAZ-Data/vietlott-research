@@ -4,7 +4,7 @@ from typing import Any
 
 ANALYSIS_EXPORT_SCHEMA: dict[str, Any] = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://nhanaz-drops.github.io/vietlott-prediction-web/data/analysis-export.schema.json",
+    "$id": "https://nhanaz-data.github.io/vietlott-prediction-web/data/analysis-export.schema.json",
     "title": "Vietlott Research Analysis Export",
     "type": "object",
     "additionalProperties": False,

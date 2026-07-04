@@ -1733,7 +1733,7 @@ function renderBacktest(backtest, kind) {
         </ol>
         <p>
           Mã triển khai nằm trong
-          <a href="https://github.com/NhanAZ-Drops/vietlott-data-research/blob/main/src/vietlott_analytics/predictions.py">src/vietlott_analytics/predictions.py</a>.
+          <a href="https://github.com/NhanAZ-Data/vietlott-data-research/blob/main/src/vietlott_analytics/predictions.py">src/vietlott_analytics/predictions.py</a>.
           Báo cáo backtest đủ ba chiến lược đang được ghi vào sổ dự đoán là “Kết hợp ba dấu hiệu”,
           “Tần suất cửa sổ gần” và “Tín hiệu kiểm định”.
         </p>

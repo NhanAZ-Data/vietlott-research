@@ -160,28 +160,28 @@ def _build_analysis_export(
         if path.startswith(("draws/", "prizes/"))
     ]
     source_files = {
-        "draws": "https://github.com/NhanAZ-Drops/vietlott-data-research/tree/main/datasets/draws",
-        "prizes": "https://github.com/NhanAZ-Drops/vietlott-data-research/tree/main/datasets/prizes",
+        "draws": "https://github.com/NhanAZ-Data/vietlott-data-research/tree/main/datasets/draws",
+        "prizes": "https://github.com/NhanAZ-Data/vietlott-data-research/tree/main/datasets/prizes",
         "prediction_ledger": (
-            "https://github.com/NhanAZ-Drops/vietlott-prediction-web/blob/main/"
+            "https://github.com/NhanAZ-Data/vietlott-prediction-web/blob/main/"
             "predictions/ledger.jsonl"
         ),
         "implementation": (
-            "https://github.com/NhanAZ-Drops/vietlott-prediction-web/tree/main/"
+            "https://github.com/NhanAZ-Data/vietlott-prediction-web/tree/main/"
             "src/vietlott_analytics"
         ),
         "quality_report": (
-            "https://github.com/NhanAZ-Drops/vietlott-data-research/blob/main/"
+            "https://github.com/NhanAZ-Data/vietlott-data-research/blob/main/"
             "datasets/metadata/quality-report.json"
         ),
         "snapshot_manifest": (
-            "https://github.com/NhanAZ-Drops/vietlott-data-research/blob/main/"
+            "https://github.com/NhanAZ-Data/vietlott-data-research/blob/main/"
             "datasets/metadata/snapshot-manifest.json"
         ),
     }
     if "weather/daily.csv" in snapshot_manifest.get("files", {}):
         source_files["weather"] = (
-            "https://github.com/NhanAZ-Drops/vietlott-data-research/blob/main/"
+            "https://github.com/NhanAZ-Data/vietlott-data-research/blob/main/"
             "datasets/weather/daily.csv"
         )
     return {

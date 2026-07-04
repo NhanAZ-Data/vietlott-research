@@ -2,11 +2,11 @@
 
 Repo này chứa website tĩnh, phân tích, backtest và sổ dự đoán. Dữ liệu kết quả
 Vietlott không được thu thập ở repo này nữa; workflow build sẽ checkout snapshot
-canonical từ [NhanAZ-Drops/vietlott-data-research](https://github.com/NhanAZ-Drops/vietlott-data-research)
+canonical từ [NhanAZ-Data/vietlott-data-research](https://github.com/NhanAZ-Data/vietlott-data-research)
 rồi sinh lại `site/data` trước khi deploy GitHub Pages.
 
 Repo thu thập dữ liệu tự động nằm tại
-[NhanAZ-Drops/vietlott-data-research](https://github.com/NhanAZ-Drops/vietlott-data-research).
+[NhanAZ-Data/vietlott-data-research](https://github.com/NhanAZ-Data/vietlott-data-research).
 
 Kho dữ liệu và chương trình Python phục vụ nghiên cứu cá nhân về khoa học dữ liệu,
 xác suất và thống kê trên kết quả Vietlott.
@@ -39,7 +39,7 @@ tích mặc định.
 ## Website thống kê
 
 Website công khai tại
-[nhanaz-drops.github.io/vietlott-prediction-web](https://nhanaz-drops.github.io/vietlott-prediction-web/).
+[nhanaz-data.github.io/vietlott-prediction-web](https://nhanaz-data.github.io/vietlott-prediction-web/).
 
 Website có báo cáo riêng cho từng họ sản phẩm, gồm
 
@@ -69,7 +69,7 @@ vietlott-research-report --datasets-dir datasets --site-dir site
 Clone repo và cài chương trình
 
 ```powershell
-git clone https://github.com/NhanAZ-Drops/vietlott-data-research.git
+git clone https://github.com/NhanAZ-Data/vietlott-data-research.git
 cd vietlott-data-research
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1

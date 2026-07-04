@@ -37,7 +37,7 @@ jobs:
       - name: Checkout data repo
         uses: actions/checkout@v6
         with:
-          repository: NhanAZ-Drops/vietlott-data-research
+          repository: NhanAZ-Data/vietlott-data-research
           ref: main
           path: _data_repo
 
