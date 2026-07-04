@@ -5,7 +5,7 @@ hiện tại chỉ giữ phần thu thập, chuẩn hóa, kiểm tra và xuất 
 tự động.
 
 Website dự đoán và phân tích đã được tách sang
-[NhanAZ-Drops/vietlott-prediction-web](https://github.com/NhanAZ-Drops/vietlott-prediction-web).
+[NhanAZ-Data/vietlott-prediction-web](https://github.com/NhanAZ-Data/vietlott-prediction-web).
 Repo web tự checkout dữ liệu từ repo này khi build, nên không cần nhân đôi
 `datasets` ở phía website.
 
@@ -27,7 +27,7 @@ thế bằng nguồn chính thức khi nguồn Vietlott truy cập được.
 ## Cài Đặt
 
 ```powershell
-git clone https://github.com/NhanAZ-Drops/vietlott-data-research.git
+git clone https://github.com/NhanAZ-Data/vietlott-data-research.git
 cd vietlott-data-research
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1

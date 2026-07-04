@@ -25,7 +25,7 @@ def test_collector_documentation_exists() -> None:
 def test_readme_points_to_split_web_repo_and_collector_docs() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
 
-    assert "NhanAZ-Drops/vietlott-prediction-web" in readme
+    assert "NhanAZ-Data/vietlott-prediction-web" in readme
     assert "docs/THU_THAP_DU_LIEU.md" in readme
     assert "docs/CHAT_LUONG_DU_LIEU.md" in readme
     assert "docs/TU_DONG_CAP_NHAT.md" in readme

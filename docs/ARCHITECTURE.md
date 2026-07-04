@@ -33,5 +33,5 @@ nguồn công khai
 
 Repo này không chứa website dự đoán, backtest, fairness audit hoặc GitHub Pages.
 Các phần đó nằm tại
-[NhanAZ-Drops/vietlott-prediction-web](https://github.com/NhanAZ-Drops/vietlott-prediction-web)
+[NhanAZ-Data/vietlott-prediction-web](https://github.com/NhanAZ-Data/vietlott-prediction-web)
 và đọc dữ liệu từ snapshot của repo này.

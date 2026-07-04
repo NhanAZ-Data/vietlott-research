@@ -65,6 +65,6 @@ Mỗi dòng là một hạng giải của một kỳ.
 
 ## Quan Hệ Với Website
 
-Repo web [NhanAZ-Drops/vietlott-prediction-web](https://github.com/NhanAZ-Drops/vietlott-prediction-web)
+Repo web [NhanAZ-Data/vietlott-prediction-web](https://github.com/NhanAZ-Data/vietlott-prediction-web)
 checkout repo này trong workflow build và đọc trực tiếp `datasets`. Collector không
 commit `site/data` và không triển khai GitHub Pages.
