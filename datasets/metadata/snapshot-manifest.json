@@ -539,9 +539,9 @@
       "sha256": "b95df0f78facc15881c227d826e0a28481fa19f43f4e3c16288977ccb99156b5"
     },
     "draws/max3dpro/all.csv": {
-      "bytes": 637975,
+      "bytes": 638053,
       "data_rows": 748,
-      "sha256": "6e398bef5abd676a07de14368be149ed7d9a72909be6b02fd31d4ece30d32bbf"
+      "sha256": "629f057f972e469a78f8873f8b58fe77ef0a56c4efe9526e384abcdaa8300ac6"
     },
     "draws/max4d/all.csv": {
       "bytes": 521574,
@@ -554,9 +554,9 @@
       "sha256": "4a7cf0ab278637656f0863bca09974a37070fdcc940b073d8d5d3441efb04656"
     },
     "draws/power655/all.csv": {
-      "bytes": 942753,
+      "bytes": 942831,
       "data_rows": 1367,
-      "sha256": "935babc40947acb932d8d8a211be5f3bce647227014263e8cf2f0c05fbb9bebe"
+      "sha256": "5721c2d5642e7ff9e2003888028526ad74b601f3e253e0d571b06baf079faeeb"
     },
     "exclusions.csv": {
       "bytes": 16789,
@@ -589,17 +589,17 @@
     "prizes/lotto535/all.csv": {
       "bytes": 1995499,
       "data_rows": 5887,
-      "sha256": "4db98e70cf012aa8772d91f6a42a0df1175c10e38858e4ac55c22663564639a6"
+      "sha256": "26caf9c26c34ab7115491f86a0cdaa3344eb71697c6345f3f1976d1f51ed4839"
     },
     "prizes/max3d/all.csv": {
       "bytes": 5793853,
       "data_rows": 12111,
-      "sha256": "5d2ec59bfd329471447573131f292ebdf199d406bc233271e89266dfab1f1151"
+      "sha256": "2b1b28a35eeca630e400a4135c917192b93fd3b6b280f10400b8c473fadeea23"
     },
     "prizes/max3dpro/all.csv": {
       "bytes": 3033295,
       "data_rows": 5984,
-      "sha256": "1a95b23951617a7c56c2a54ac855f41cc36ee3d45f04cf8fec908c7fd861b267"
+      "sha256": "99f8800f8a9d82e3a779679a7b79fc0a15f50fdc832293aee620ce85a8c118bb"
     },
     "prizes/max4d/all.csv": {
       "bytes": 1764794,
@@ -609,12 +609,12 @@
     "prizes/mega645/all.csv": {
       "bytes": 2255781,
       "data_rows": 6124,
-      "sha256": "c02711916ef2ea7d4c9c4c41ceff11807eb5c873840f5e6065c3997ccb252777"
+      "sha256": "d8875bdef13c92afce484ae0dccd6a3e4821e8e04dd448dc8796c6b0fb2c665b"
     },
     "prizes/power655/all.csv": {
       "bytes": 2554525,
       "data_rows": 6835,
-      "sha256": "8fe131c39816b0ae17d7c950643c061659d1f0f73c5e62724b33c98af64b79ce"
+      "sha256": "12d7e114ac93820fb33593f82a6a42c643a36c3d1083f68f661fca1d8145fd0f"
     }
   },
   "methodology_versions": {
