@@ -13,10 +13,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap">
   <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/3.0.0/uicons-regular-rounded/css/uicons-regular-rounded.css">
-  <link rel="stylesheet" href="assets/styles.css?v=20260723-1">
-  <script src="assets/app.js?v=20260723-1" defer></script>
+  <link rel="stylesheet" href="assets/styles.css?v=20260723-2">
+  <script src="assets/app.js?v=20260723-2" defer></script>
 </head>
-<body class="prediction-home">
+<body class="prediction-home minimal-v2">
   <a class="skip-link" href="#main">Bỏ qua điều hướng</a>
   <header class="site-header">
     <a class="brand" href="index.html" aria-label="Vietlott Prediction Lab">
@@ -35,7 +35,7 @@
   </header>
 
   <main id="main">
-    <section id="tong-quan" class="hero lab-hero shell">
+    <section id="tong-quan" class="hero lab-hero shell" hidden>
       <div class="hero-copy">
         <p class="eyebrow"><span class="pulse-dot"></span> Prediction engine / online</p>
         <h1>Săn mọi<br><span>tín hiệu yếu.</span></h1>
@@ -510,50 +510,42 @@
     </section>
 
     <section id="du-doan" class="prediction-section">
-      <div class="shell">
-        <div class="section-heading light">
+      <div class="shell prediction-focus">
+        <header class="focus-header">
           <div>
-            <p class="eyebrow">Kỳ kế tiếp</p>
-            <h2>Dự đoán đang chạy</h2>
+            <p class="eyebrow">Next confirmed draw</p>
+            <h1>Kỳ kế tiếp.</h1>
           </div>
-          <p>
-            Bốn góc nhìn, cùng một kỳ mục tiêu. Không dự đoán nào được sửa sau khi
-            kết quả xuất hiện.
-          </p>
-        </div>
-        <div class="prediction-warning">
-          <strong>Trạng thái</strong>
-          <span id="prediction-current-conclusion">
-            Đang đọc hiệu suất ngoài mẫu.
-          </span>
-        </div>
-        <div class="prediction-toolbar">
-          <label for="prediction-product">Sản phẩm</label>
-          <select id="prediction-product"></select>
-          <span id="prediction-ledger-status">...</span>
-        </div>
-        <div class="prediction-mode" role="group" aria-label="Lọc mô hình dự đoán">
-          <button type="button" class="mode-button active" data-prediction-mode="all" aria-pressed="true">Tất cả</button>
-          <button type="button" class="mode-button" data-prediction-mode="core" aria-pressed="false">Core</button>
-          <button type="button" class="mode-button" data-prediction-mode="explorer" aria-pressed="false">Explorer</button>
-          <button type="button" class="mode-button" data-prediction-mode="baseline" aria-pressed="false">Baseline</button>
-        </div>
+          <div class="prediction-toolbar">
+            <label for="prediction-product">Sản phẩm</label>
+            <select id="prediction-product"></select>
+          </div>
+        </header>
+        <p id="prediction-ledger-status" class="focus-target">...</p>
+        <div id="prediction-cards" class="prediction-grid"></div>
+        <p id="prediction-current-conclusion" class="focus-verdict">Đang đọc hiệu suất ngoài mẫu.</p>
         <p id="prediction-ledger-integrity" class="prediction-ledger-integrity">
           Đang kiểm tra chuỗi hash của sổ dự đoán...
         </p>
-        <div id="prediction-cards" class="prediction-grid"></div>
+
+        <div class="focus-disclosures">
+        <details class="disclosure-panel">
+          <summary>
+            <span>Tín hiệu đang theo dõi</span>
+            <strong id="signal-radar-status">Đang quét...</strong>
+          </summary>
         <section id="tin-hieu" class="signal-radar" aria-labelledby="signal-radar-title">
           <div class="signal-radar-heading">
             <div>
               <p class="panel-kicker">Discovery feed</p>
               <h3 id="signal-radar-title">Tín hiệu đang được theo dõi</h3>
             </div>
-            <span id="signal-radar-status">Đang quét...</span>
           </div>
           <div id="signal-radar-list" class="signal-radar-list"></div>
           <p class="signal-radar-note">Điểm ưu tiên chỉ dùng để xếp hàng thử nghiệm, không phải xác suất trúng.</p>
         </section>
-        <details class="results-vault">
+        </details>
+        <details class="results-vault disclosure-panel">
           <summary>
             <span>Kết quả đã đối chiếu</span>
             <strong>Mở hiệu suất và lịch sử</strong>
@@ -579,7 +571,7 @@
           </details>
         </section>
         </details>
-        <details class="archive-vault">
+        <details class="archive-vault disclosure-panel">
           <summary>
             <span>Kho lưu trữ toàn hệ thống</span>
             <strong>Xem mọi lượt dự đoán</strong>
@@ -635,6 +627,7 @@
           <a href="phuong-phap.html#du-doan">Xem thuật toán và quy tắc chống rò rỉ dữ liệu</a>
         </div>
         </details>
+        </div>
       </div>
     </section>
 

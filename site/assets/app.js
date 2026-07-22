@@ -5,6 +5,7 @@ const state = {
   product: null,
   predictionProduct: null,
   predictionMode: "all",
+  primaryPredictionStrategy: "balanced_signal",
   selectedNumber: null,
   reportCache: new Map(),
   reportPromises: new Map(),
@@ -1998,7 +1999,6 @@ function renderPredictionShell(predictions, products) {
       : "Sổ dự đoán chưa có chuỗi hash hợp lệ để công bố.",
   );
   setupPredictionArchive();
-  setupPredictionModes();
   const select = document.getElementById("prediction-product");
   const available = products.filter((product) => predictions.latest[product.slug]);
   select.innerHTML = available
@@ -2033,6 +2033,7 @@ function setupPredictionModes() {
 
 function selectPredictionProduct(slug) {
   state.predictionProduct = slug;
+  state.primaryPredictionStrategy = "balanced_signal";
   renderPredictionCards(slug);
   text("signal-radar-status", "Đang quét...");
   const list = document.getElementById("signal-radar-list");
@@ -2141,10 +2142,6 @@ function predictionPendingRows(predictions) {
 
 function renderPredictionCards(slug) {
   const allPredictions = state.predictions.latest[slug] || [];
-  const predictions = allPredictions.filter((prediction) => {
-    const mode = predictionModeForStrategy(prediction.strategy);
-    return state.predictionMode === "all" || state.predictionMode === mode;
-  });
   const product = state.manifest.products.find((item) => item.slug === slug);
   const latest = allPredictions[0];
   text(
@@ -2153,40 +2150,86 @@ function renderPredictionCards(slug) {
       ? `${predictionTargetLabel(latest)} · Dùng dữ liệu đến kỳ #${latest.dataset_cutoff_draw_id} ngày ${formatDate(latest.dataset_cutoff_date)}`
       : "Chưa có dự đoán",
   );
-  document.getElementById("prediction-cards").innerHTML = predictions
-    .map((prediction) => {
-      const copy = predictionStrategyCopy(prediction.strategy);
-      const mode = predictionModeForStrategy(prediction.strategy);
-      const values = prediction.prediction.numbers;
-      const output = values
-        ? `
-          <div class="prediction-values">
-            ${values.map((value) => `<span class="ball">${String(value).padStart(2, "0")}</span>`).join("")}
-            ${(prediction.prediction.special_numbers || []).map((value) => `<span class="ball special">${String(value).padStart(2, "0")}</span>`).join("")}
-          </div>`
-        : `<div class="prediction-sequence">${escapeHtml(prediction.prediction.sequence)}</div>`;
-      return `
-        <article class="prediction-card mode-${escapeHtml(mode)}${prediction.strategy === "audit_signal" ? " primary" : ""}">
-          <div class="prediction-card-head">
-            <span class="strategy-name">${escapeHtml(copy.title)}</span>
-            <span class="model-mode">${escapeHtml(mode)}</span>
-          </div>
-          <p class="strategy-description">${escapeHtml(copy.description)}</p>
-          ${output}
-          <div class="prediction-meta">
-            <span>Mã lưu vết ${escapeHtml(prediction.prediction_id)}</span>
-            <span>${escapeHtml(predictionTargetLabel(prediction))}</span>
-            <span>Dữ liệu đến kỳ #${escapeHtml(prediction.dataset_cutoff_draw_id)}</span>
-          </div>
-        </article>`;
-    })
-    .join("");
-  if (!predictions.length) {
-    document.getElementById("prediction-cards").innerHTML =
+  const container = document.getElementById("prediction-cards");
+  const primary = allPredictions.find(
+    (prediction) => prediction.strategy === state.primaryPredictionStrategy,
+  ) || allPredictions.find((prediction) => prediction.strategy === "balanced_signal")
+    || allPredictions[0];
+  if (!primary) {
+    container.innerHTML =
       '<div class="error-card">Chưa có dự đoán cho sản phẩm này.</div>';
+  } else {
+    state.primaryPredictionStrategy = primary.strategy;
+    const copy = predictionStrategyCopy(primary.strategy);
+    const mode = predictionModeForStrategy(primary.strategy);
+    container.innerHTML = `
+      <article class="prediction-primary mode-${escapeHtml(mode)}">
+        <div class="primary-label">
+          <span>${escapeHtml(mode)}</span>
+          <strong>${escapeHtml(copy.title)}</strong>
+        </div>
+        ${renderPrimaryPredictionValue(primary)}
+        <p>${escapeHtml(copy.description)}</p>
+        <div class="primary-meta">
+          <span>Dữ liệu khóa tại kỳ #${escapeHtml(primary.dataset_cutoff_draw_id)}</span>
+          <span>${escapeHtml(primary.prediction_id)}</span>
+        </div>
+      </article>
+      <div class="model-run">
+        <div class="model-run-heading">
+          <span>Các mô hình trong lần chạy này</span>
+          <strong>${numberFormatter.format(allPredictions.length)}</strong>
+        </div>
+        <div class="model-list">
+          ${allPredictions.map((prediction) => renderModelRow(prediction, primary)).join("")}
+        </div>
+      </div>`;
+    container.onclick = (event) => {
+      const button = event.target.closest("[data-focus-strategy]");
+      if (!button) return;
+      state.primaryPredictionStrategy = button.dataset.focusStrategy;
+      renderPredictionCards(slug);
+    };
   }
   renderPredictionResults(slug);
   if (product) document.getElementById("prediction-product").value = product.slug;
+}
+
+function renderPrimaryPredictionValue(prediction) {
+  const values = prediction.prediction.numbers;
+  if (!values) {
+    return `<div class="primary-sequence">${escapeHtml(prediction.prediction.sequence)}</div>`;
+  }
+  return `
+    <div class="primary-values">
+      ${values.map((value) => `<span>${String(value).padStart(2, "0")}</span>`).join("")}
+      ${(prediction.prediction.special_numbers || [])
+        .map((value) => `<span class="special">${String(value).padStart(2, "0")}</span>`)
+        .join("")}
+    </div>`;
+}
+
+function renderModelRow(prediction, primary) {
+  const copy = predictionStrategyCopy(prediction.strategy);
+  const mode = predictionModeForStrategy(prediction.strategy);
+  const values = prediction.prediction.numbers;
+  const compactValue = values
+    ? [
+        ...values.map((value) => String(value).padStart(2, "0")),
+        ...(prediction.prediction.special_numbers || []).map(
+          (value) => `+${String(value).padStart(2, "0")}`,
+        ),
+      ].join(" ")
+    : prediction.prediction.sequence;
+  const selected = prediction.strategy === primary.strategy;
+  return `
+    <button class="model-row${selected ? " selected" : ""}" type="button"
+      data-focus-strategy="${escapeHtml(prediction.strategy)}" aria-pressed="${selected}">
+      <span class="model-dot"></span>
+      <span class="model-name"><strong>${escapeHtml(copy.title)}</strong><small>${escapeHtml(mode)}</small></span>
+      <span class="model-value">${escapeHtml(compactValue)}</span>
+      <span class="model-arrow" aria-hidden="true">↗</span>
+    </button>`;
 }
 
 function predictionModeForStrategy(strategy) {

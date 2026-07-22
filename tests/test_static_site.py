@@ -20,8 +20,8 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert 'id="phan-tich"' in index
     assert 'id="du-doan"' in index
     assert 'id="kiem-dinh"' in index
-    assert "assets/app.js?v=20260723-1" in index
-    assert "assets/styles.css?v=20260723-1" in index
+    assert "assets/app.js?v=20260723-2" in index
+    assert "assets/styles.css?v=20260723-2" in index
     assert "archive-summary-heading" in index
     assert "Sổ dự đoán toàn hệ thống" in index
     assert "assets/docs.js?v=20260618-2" in data_page
@@ -36,11 +36,12 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert "family=Manrope" in index
     assert "fonts.googleapis.com/css2?family=Noto+Serif" in method_page
     assert "fonts.googleapis.com/css2?family=Noto+Serif" in data_page
-    assert 'class="prediction-home"' in index
-    assert 'data-prediction-mode="explorer"' in index
+    assert 'class="prediction-home minimal-v2"' in index
+    assert 'class="focus-header"' in index
+    assert 'class="focus-disclosures"' in index
     assert 'id="signal-radar-list"' in index
-    assert 'class="results-vault"' in index
-    assert 'class="archive-vault"' in index
+    assert 'class="results-vault disclosure-panel"' in index
+    assert 'class="archive-vault disclosure-panel"' in index
     assert 'id="phan-tich" class="analysis-section shell" hidden' in index
     assert 'id="kiem-dinh" class="audit-overview shell" aria-labelledby="audit-title" hidden' in index
     assert "[hidden]" in styles
@@ -121,6 +122,9 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert "renderSignalRadar" in app_script
     assert "signalDiscoveryScore" in app_script
     assert "predictionModeForStrategy" in app_script
+    assert "renderPrimaryPredictionValue" in app_script
+    assert "renderModelRow" in app_script
+    assert "data-focus-strategy" in app_script
     assert "setupPredictionProductFilters" in app_script
     assert 'details class="prediction-latest-panel"' in app_script
     assert "renderPredictionArchiveDetail" in app_script
