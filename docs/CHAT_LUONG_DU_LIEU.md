@@ -40,8 +40,9 @@ coi một dòng là nguồn chính thức khi metadata thể hiện điều đó
 - Giữ nguyên trạng thái không cần bằng chứng mới
 - `unchecked` thuộc trục kiểm tra cấu trúc, không phải trạng thái xác nhận kỳ quay
 
-Các quy tắc này được kiểm tra trong
-`src/vietlott_collector/provenance.py` và `tests/test_provenance.py`.
+Các quy tắc này được kiểm tra ở cả lớp thu thập và lớp phân tích trong
+`src/vietlott_collector/provenance.py`, `src/vietlott_analytics/provenance.py`,
+`tests/test_provenance.py` và `tests/test_analytics_io.py`.
 
 ## Báo cáo snapshot ngày 15/06/2026
 

@@ -5,16 +5,35 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_collector_documentation_exists() -> None:
+def test_research_documentation_and_issue_templates_exist() -> None:
     required = [
         ROOT / "docs" / "DATA_DICTIONARY.md",
-        ROOT / "docs" / "THU_THAP_DU_LIEU.md",
-        ROOT / "docs" / "CHAT_LUONG_DU_LIEU.md",
-        ROOT / "docs" / "TU_DONG_CAP_NHAT.md",
-        ROOT / "docs" / "SOURCE_SURVEY.md",
-        ROOT / "docs" / "ARCHITECTURE.md",
+        ROOT / "docs" / "AUDIT_EFFECT_THRESHOLDS.md",
+        ROOT / "docs" / "AUDIT_TEST_DEPENDENCIES.md",
+        ROOT / "docs" / "AUDIT_TIER_BREAKDOWN.md",
+        ROOT / "docs" / "AUDIT_PERIOD_BREAKDOWN.md",
+        ROOT / "docs" / "AUDIT_SOURCE_BREAKDOWN.md",
+        ROOT / "docs" / "AUDIT_SOURCE_SENSITIVITY.md",
+        ROOT / "docs" / "AUDIT_RELIABILITY_SENSITIVITY.md",
+        ROOT / "docs" / "AUDIT_POWER_ANALYSIS.md",
+        ROOT / "docs" / "AUDIT_PERMUTATION_CHECKS.md",
+        ROOT / "docs" / "AUDIT_BLOCK_BOOTSTRAP.md",
+        ROOT / "docs" / "AUDIT_CHANGE_POINT_SCAN.md",
+        ROOT / "docs" / "AUDIT_KENO_PAIR_COOCCURRENCE.md",
+        ROOT / "docs" / "BACKTEST_TARGET_SCOPE.md",
+        ROOT / "docs" / "BACKTEST_SCORE_FORMULAS.md",
+        ROOT / "docs" / "BACKTEST_PHASE_SPLIT.md",
+        ROOT / "docs" / "BACKTEST_MULTIPLE_TESTING.md",
+        ROOT / "docs" / "BACKTEST_TRIAL_DISPOSITION.md",
+        ROOT / "docs" / "BACKTEST_WINDOW_SENSITIVITY.md",
+        ROOT / "docs" / "BACKTEST_BLOCK_BOOTSTRAP.md",
+        ROOT / "docs" / "METHODOLOGY_CHANGELOG.md",
+        ROOT / "docs" / "templates" / "BAO_CAO_KET_QUA_AM.md",
+        ROOT / "docs" / "DU_DOAN_BINGO18_0171884.md",
+        ROOT / "docs" / "protocols" / "MAX3D_POSITION_CONFIRMATION.md",
         ROOT / ".github" / "ISSUE_TEMPLATE" / "loi-du-lieu.yml",
         ROOT / ".github" / "ISSUE_TEMPLATE" / "loi-nguon.yml",
+        ROOT / ".github" / "ISSUE_TEMPLATE" / "tin-hieu-thong-ke.yml",
     ]
 
     for path in required:
@@ -22,11 +41,280 @@ def test_collector_documentation_exists() -> None:
         assert path.read_text(encoding="utf-8").strip(), path
 
 
-def test_readme_points_to_split_web_repo_and_collector_docs() -> None:
+def test_readme_links_research_documents_without_em_dash() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
 
-    assert "NhanAZ-Data/vietlott-prediction-web" in readme
-    assert "docs/THU_THAP_DU_LIEU.md" in readme
-    assert "docs/CHAT_LUONG_DU_LIEU.md" in readme
-    assert "docs/TU_DONG_CAP_NHAT.md" in readme
-    assert "vietlott-research-report" not in readme
+    assert "docs/DATA_DICTIONARY.md" in readme
+    assert "docs/AUDIT_EFFECT_THRESHOLDS.md" in readme
+    assert "docs/AUDIT_TEST_DEPENDENCIES.md" in readme
+    assert "docs/AUDIT_TIER_BREAKDOWN.md" in readme
+    assert "docs/AUDIT_PERIOD_BREAKDOWN.md" in readme
+    assert "docs/AUDIT_SOURCE_BREAKDOWN.md" in readme
+    assert "docs/AUDIT_SOURCE_SENSITIVITY.md" in readme
+    assert "docs/AUDIT_RELIABILITY_SENSITIVITY.md" in readme
+    assert "docs/AUDIT_POWER_ANALYSIS.md" in readme
+    assert "docs/AUDIT_PERMUTATION_CHECKS.md" in readme
+    assert "docs/AUDIT_BLOCK_BOOTSTRAP.md" in readme
+    assert "docs/AUDIT_CHANGE_POINT_SCAN.md" in readme
+    assert "docs/AUDIT_KENO_PAIR_COOCCURRENCE.md" in readme
+    assert "docs/BACKTEST_TARGET_SCOPE.md" in readme
+    assert "docs/BACKTEST_SCORE_FORMULAS.md" in readme
+    assert "docs/BACKTEST_PHASE_SPLIT.md" in readme
+    assert "docs/BACKTEST_MULTIPLE_TESTING.md" in readme
+    assert "docs/BACKTEST_TRIAL_DISPOSITION.md" in readme
+    assert "docs/BACKTEST_WINDOW_SENSITIVITY.md" in readme
+    assert "docs/BACKTEST_BLOCK_BOOTSTRAP.md" in readme
+    assert "docs/METHODOLOGY_CHANGELOG.md" in readme
+    assert "docs/templates/BAO_CAO_KET_QUA_AM.md" in readme
+    assert "docs/DU_DOAN_BINGO18_0171884.md" in readme
+    assert "docs/protocols/MAX3D_POSITION_CONFIRMATION.md" in readme
+    assert "—" not in readme
+
+
+def test_statistical_signal_issue_template_has_interpretation_guardrails() -> None:
+    template = (
+        ROOT / ".github" / "ISSUE_TEMPLATE" / "tin-hieu-thong-ke.yml"
+    ).read_text(encoding="utf-8")
+
+    assert "không kết luận gian lận" in template
+    assert "Kết quả âm" in template
+    assert "q, độ lớn hiệu ứng" in template
+
+
+def test_prediction_baseline_documentation_has_required_fields() -> None:
+    data_dictionary = (ROOT / "docs" / "DATA_DICTIONARY.md").read_text(
+        encoding="utf-8"
+    )
+    research_note = (ROOT / "docs" / "NGHIEN_CUU.md").read_text(encoding="utf-8")
+
+    assert "baseline_intervals" in data_dictionary
+    assert "poisson_binomial_exact_dp" in data_dictionary
+    assert "strategy_baseline_comparisons" in data_dictionary
+    assert "pooled_rate_suppressed" in data_dictionary
+    assert "minimum_evaluations_for_baseline_claim" in data_dictionary
+    assert "phép so sánh cặp" in research_note
+    assert "không gộp tỷ lệ đúng" in research_note
+
+
+def test_effect_threshold_documentation_has_required_review_fields() -> None:
+    document = (ROOT / "docs" / "AUDIT_EFFECT_THRESHOLDS.md").read_text(encoding="utf-8")
+
+    assert "Đơn vị" in document
+    assert "Phạm vi áp dụng" in document
+    assert "Lập luận hoặc tham khảo" in document
+    assert "Phân tích độ nhạy" in document
+    assert "threshold_sensitivity" in document
+
+
+def test_audit_dependency_documentation_has_required_fields() -> None:
+    document = (ROOT / "docs" / "AUDIT_TEST_DEPENDENCIES.md").read_text(encoding="utf-8")
+
+    assert "dependency_matrix" in document
+    assert "q_value_dependency_family_bh" in document
+    assert "q_value_global_bh" in document
+    assert "high" in document
+    assert "medium" in document
+    assert "low" in document
+
+
+def test_audit_tier_breakdown_documentation_has_required_fields() -> None:
+    document = (ROOT / "docs" / "AUDIT_TIER_BREAKDOWN.md").read_text(encoding="utf-8")
+
+    assert "tier_breakdown" in document
+    assert "digit_position_chi_square" in document
+    assert "full_sequence" in document
+    assert "wildcard_prefix" in document
+    assert "không phải một bộ kiểm định mới" in document
+
+
+def test_audit_period_breakdown_documentation_has_required_fields() -> None:
+    document = (ROOT / "docs" / "AUDIT_PERIOD_BREAKDOWN.md").read_text(encoding="utf-8")
+
+    assert "period_breakdown" in document
+    assert "digit_position_chi_square" in document
+    assert "không chồng lấn" in document
+    assert "no_new_p_values" in document
+    assert "top_residuals" in document
+
+
+def test_audit_source_breakdown_documentation_has_required_fields() -> None:
+    document = (ROOT / "docs" / "AUDIT_SOURCE_BREAKDOWN.md").read_text(encoding="utf-8")
+
+    assert "source_breakdown" in document
+    assert "digit_position_chi_square" in document
+    assert "attributes_json.data_source" in document
+    assert "no_new_p_values" in document
+    assert "top_residuals" in document
+
+
+def test_audit_source_sensitivity_documentation_has_required_fields() -> None:
+    document = (ROOT / "docs" / "AUDIT_SOURCE_SENSITIVITY.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "source_leave_one_out" in document
+    assert "digit_position_chi_square" in document
+    assert "attributes_json.data_source" in document
+    assert "no_new_p_values" in document
+    assert "effect_size_delta" in document
+
+
+def test_audit_reliability_sensitivity_documentation_has_required_fields() -> None:
+    document = (ROOT / "docs" / "AUDIT_RELIABILITY_SENSITIVITY.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "reliability_sensitivity" in document
+    assert "draw_status=confirmed" in document
+    assert "not_confirmed_rows" in document
+    assert "source_verification" in document
+    assert "no_new_p_values" in document
+
+
+def test_audit_power_analysis_documentation_has_required_fields() -> None:
+    document = (ROOT / "docs" / "AUDIT_POWER_ANALYSIS.md").read_text(encoding="utf-8")
+
+    assert "power_analysis" in document
+    assert "power_summary" in document
+    assert "effective_sample_size" in document
+    assert "minimum_detectable_effect" in document
+    assert "unsupported_scale" in document
+
+
+def test_audit_permutation_documentation_has_required_fields() -> None:
+    document = (ROOT / "docs" / "AUDIT_PERMUTATION_CHECKS.md").read_text(encoding="utf-8")
+
+    assert "permutation_check" in document
+    assert "whole_observation_label_permutation" in document
+    assert "empirical_p_value" in document
+    assert "preserve_unit" in document
+    assert "no_multiple_testing_decision" in document
+
+
+def test_audit_block_bootstrap_documentation_has_required_fields() -> None:
+    document = (ROOT / "docs" / "AUDIT_BLOCK_BOOTSTRAP.md").read_text(encoding="utf-8")
+
+    assert "block_bootstrap_check" in document
+    assert "moving_block_bootstrap" in document
+    assert "confidence_interval_lower" in document
+    assert "contiguous_observation_blocks" in document
+    assert "no_multiple_testing_decision" in document
+
+
+def test_audit_change_point_scan_documentation_has_required_fields() -> None:
+    document = (ROOT / "docs" / "AUDIT_CHANGE_POINT_SCAN.md").read_text(encoding="utf-8")
+
+    assert "change_point_scan" in document
+    assert "pre_registered_candidate_scan" in document
+    assert "candidate_fractions" in document
+    assert "multiple_candidate_correction" in document
+    assert "bonferroni" in document
+    assert "adjusted_p_value" in document
+    assert "no_unadjusted_search_decision" in document
+
+
+def test_audit_keno_pair_cooccurrence_documentation_has_required_fields() -> None:
+    document = (ROOT / "docs" / "AUDIT_KENO_PAIR_COOCCURRENCE.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "number_pair_co_occurrence" in document
+    assert "dense_pair_index_vector" in document
+    assert "pair_observations" in document
+    assert "observed_pair_observations" in document
+    assert "no_sampling" in document
+    assert "top_pairs" in document
+
+
+def test_backtest_target_scope_documentation_has_required_fields() -> None:
+    document = (ROOT / "docs" / "BACKTEST_TARGET_SCOPE.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "target_scope" in document
+    assert "scope_id" in document
+    assert "target_draw_count" in document
+    assert "target_draw_ids_sha256" in document
+    assert "no_strategy_specific_filtering" in document
+
+
+def test_backtest_score_formula_documentation_has_required_fields() -> None:
+    document = (ROOT / "docs" / "BACKTEST_SCORE_FORMULAS.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "score_formulas" in document
+    assert "main_number_hits_per_draw" in document
+    assert "best_position_matches_per_draw" in document
+    assert "comparison_difference" in document
+    assert "special_numbers_not_scored_in_backtest" in document
+    assert "partial_match_baseline" in document
+    assert "expected_partial_match_count" in document
+    assert "strategy_pairwise_comparisons" in document
+    assert "paired_permutation_test" in document
+    assert "effect_summary" in document
+
+
+def test_backtest_phase_split_documentation_has_required_fields() -> None:
+    document = (ROOT / "docs" / "BACKTEST_PHASE_SPLIT.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "phase_split" in document
+    assert "selection_phase" in document
+    assert "final_evaluation_phase" in document
+    assert "formulas_frozen_before_final_evaluation" in document
+    assert "selection_result_used_to_choose_formulas" in document
+    assert "target_scope" in document
+    assert "phase_split_validation" in document
+
+
+def test_backtest_multiple_testing_documentation_has_required_fields() -> None:
+    document = (ROOT / "docs" / "BACKTEST_MULTIPLE_TESTING.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "multiple_testing_trials" in document
+    assert "published_trial_count" in document
+    assert "registered_parameter_variant_count" in document
+    assert "correction_trial_count" in document
+    assert "multiple_testing_scope" in document
+    assert "multiple_testing_registry_validation" in document
+
+
+def test_backtest_trial_disposition_documentation_has_required_fields() -> None:
+    document = (ROOT / "docs" / "BACKTEST_TRIAL_DISPOSITION.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "trial_disposition_log" in document
+    assert "included_trials" in document
+    assert "rejected_configurations" in document
+    assert "failed_trial_count" in document
+    assert "reason_code" in document
+    assert "trial_disposition_validation" in document
+
+
+def test_backtest_window_sensitivity_documentation_has_required_fields() -> None:
+    document = (ROOT / "docs" / "BACKTEST_WINDOW_SENSITIVITY.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "window_sensitivity" in document
+    assert "registered_window_draws" in document
+    assert "primary_recent_window_draws" in document
+    assert "alternative_window_trial_count" in document
+    assert "multiple_testing_trials" in document
+    assert "window_sensitivity_validation" in document
+
+
+def test_backtest_block_bootstrap_documentation_has_required_fields() -> None:
+    document = (ROOT / "docs" / "BACKTEST_BLOCK_BOOTSTRAP.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "block_bootstrap_check" in document
+    assert "moving_block_bootstrap" in document
+    assert "normal_approximation" in document
+    assert "interval_overlap_with_normal_approximation" in document
+    assert "block_bootstrap_validation" in document

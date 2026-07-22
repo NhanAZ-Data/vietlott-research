@@ -48,7 +48,7 @@ def run_update(
         user_agent=(
             "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) "
             "Gecko/20100101 Firefox/128.0 "
-            f"NhanAZ-vietlott-data-research/0.2 contact/{contact}"
+            f"NhanAZ-vietlott-research/1.0 contact/{contact}"
         ),
     )
     try:

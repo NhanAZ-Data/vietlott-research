@@ -1,0 +1,47 @@
+name: Tín hiệu thống kê cần tái kiểm tra
+description: Ghi nhận tín hiệu mà không tự động kết luận nguyên nhân hoặc gian lận
+title: "research: "
+labels:
+  - research
+body:
+  - type: input
+    id: preregistration
+    attributes:
+      label: Giao thức đăng ký trước
+      description: Liên kết hoặc mã giao thức. Để trống nếu đây chỉ là phát hiện thăm dò
+  - type: input
+    id: snapshot
+    attributes:
+      label: Snapshot và hash
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Kết quả định lượng
+      description: p, q, độ lớn hiệu ứng, ngưỡng thực dụng và khoảng ước lượng
+    validations:
+      required: true
+  - type: textarea
+    id: multiplicity
+    attributes:
+      label: Phạm vi nhiều phép thử
+      description: Tổng số giả thuyết và phương pháp hiệu chỉnh
+    validations:
+      required: true
+  - type: textarea
+    id: alternative
+    attributes:
+      label: Giải thích thay thế cần loại trừ
+      description: Lỗi parser, khác nguồn, thay đổi thiết bị, mùa vụ hoặc dữ liệu thiếu
+    validations:
+      required: true
+  - type: checkboxes
+    id: guardrails
+    attributes:
+      label: Cam kết diễn giải
+      options:
+        - label: Issue không kết luận gian lận chỉ từ tín hiệu thống kê
+          required: true
+        - label: Kết quả âm và thử nghiệm thất bại cũng sẽ được lưu
+          required: true

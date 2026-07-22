@@ -3,15 +3,16 @@ requires = ["setuptools>=70", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "vietlott-history-collector"
-version = "0.2.0"
-description = "Collect and normalize public Vietlott draw history for data research."
+name = "vietlott-research"
+version = "1.0.0"
+description = "Collect, validate, analyze, and publish public Vietlott draw data."
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [{name = "NhanAZ"}]
 dependencies = [
   "beautifulsoup4>=4.12,<5",
+  "jsonschema>=4.23,<5",
   "pandas>=2.2,<3",
   "requests>=2.32,<3",
 ]
@@ -21,7 +22,6 @@ parquet = [
   "pyarrow>=17,<23",
 ]
 dev = [
-  "jsonschema>=4.23,<5",
   "pytest>=8.3,<10",
   "ruff>=0.9,<1",
 ]
@@ -36,6 +36,7 @@ vietlott-keno-gap-repair = "vietlott_collector.keno_gap_repair:main"
 vietlott-keno-full-history = "vietlott_collector.keno_full_history:main"
 vietlott-auto-update = "vietlott_collector.incremental_update:main"
 vietlott-repository-data = "vietlott_collector.repository_data:main"
+vietlott-research-report = "vietlott_analytics.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -47,7 +48,7 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 110
 target-version = "py311"
-extend-exclude = ["_sources", "data", "datasets", "tmp"]
+extend-exclude = ["_sources", "data", "datasets", "site/data", "tmp"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]

@@ -1,0 +1,120 @@
+# Nhật ký phương pháp
+
+Nhật ký này chỉ ghi thay đổi có thể làm đổi số liệu, trạng thái kiểm định, kết quả
+backtest hoặc cách đọc website. Thay đổi giao diện thuần túy không cần mục riêng.
+
+## 18/06/2026
+
+### Fairness audit 2.0.0
+
+- Thêm `parameters.permutation_check` cho các phép kiểm phụ thuộc thứ tự:
+  `runs`, `lag1_autocorrelation` và `split_half_change`
+- Hoán vị tráo thứ tự nguyên đơn vị quan sát, giữ nguyên tổng bộ số của từng kỳ
+  hoặc giá trị/tổng chữ số của từng kết quả
+- `empirical_p_value` của permutation check là chẩn đoán bền vững, không thay
+  `p_value`, q-value hoặc `status` chính
+- Chuỗi quá dài dùng lấy mẫu đều quyết định sẵn tối đa 5.000 đơn vị để giữ
+  workflow tự động tái lập và đủ nhẹ
+- Thêm `parameters.block_bootstrap_check` cho cùng nhóm phép kiểm thứ tự, dùng
+  moving-block bootstrap 199 lần để công bố khoảng 95% của thống kê mà không đổi
+  p-value, q-value hoặc `status`
+- Chuỗi rất dài trong block bootstrap dùng tối đa 2.500 đơn vị lấy đều quyết định
+  sẵn, kèm `block_length` và `sampling_method` trong JSON
+- Thay phép so split-half duy nhất của hai test `*_split_half_change` bằng
+  `parameters.change_point_scan`, quét các điểm cắt 20% đến 80% đã đăng ký trước
+- P-value chính của change-point scan dùng Bonferroni theo số điểm ứng viên, còn
+  `raw_p_value` chỉ là trường giải thích ứng viên mạnh nhất
+- Thay skip đồng xuất hiện Keno bằng `dense_pair_index_vector`, đếm đầy đủ 3.160
+  cặp hợp lệ trên toàn bộ lịch sử và công bố `no_sampling = true`
+- Thêm `parameters.source_leave_one_out` cho `digit_position_chi_square`, loại
+  từng nguồn dữ liệu rồi tính lại chi-square và độ lớn hiệu ứng để đọc độ nhạy
+  provenance; bảng này không tạo p-value, q-value hoặc status mới
+- Thêm `reliability_sensitivity` ở cấp audit sản phẩm, xác nhận audit chính đã
+  loại `not_confirmed` và so lại statistic/effect trên lát `source_verification`
+  đáng tin cậy khi đủ mẫu; bảng này không tạo p-value, q-value hoặc status mới
+
+### Backtest 2.0.0
+
+- Thêm `target_scope` cho từng backtest sản phẩm, khóa SHA-256 danh sách kỳ mục
+  tiêu và bắt `model`, `recent_model`, `audit_model`, `baseline` cùng ba
+  comparison dùng chung `target_scope_id`
+- `manifest.backtest_summary.target_scope_validation` công bố trạng thái validate
+  toàn hệ thống; thay đổi này không đổi công thức điểm, p-value, q-value hoặc
+  kết luận, chỉ khóa mẫu so sánh
+- Thêm `backtest.score_formulas` cho từng sản phẩm, tách đơn vị
+  `main_number_hits_per_draw` của tập số khỏi `best_position_matches_per_draw`
+  của chuỗi chữ số và công bố công thức từng chiến lược bằng JSON có cấu trúc
+- Thêm `backtest.baseline.partial_match_baseline`, công bố xác suất và số lượt
+  kỳ vọng cho trùng một phần, gần đúng và không trùng gì trên đúng tập kỳ
+  walk-forward đã khóa; trường này không đổi p-value, q-value hoặc kết luận
+  thắng baseline
+- Thêm `backtest.phase_split`, tách nửa đầu cửa sổ walk-forward làm phase
+  chọn/khóa công thức và nửa sau làm phase đánh giá cuối; `backtest.samples`,
+  `target_scope`, baseline và ba comparison công bố chỉ dùng phase đánh giá cuối
+- `manifest.backtest_summary.phase_split_validation` công bố trạng thái validate
+  phase toàn hệ thống và bắt phase đánh giá cuối trùng `target_scope`
+- Thêm `backtest.multiple_testing_trials` và hiệu chỉnh Benjamini-Hochberg trên
+  cả mô hình công bố lẫn các biến thể tham số đã đăng ký/thử; `comparison_count`
+  vẫn là số comparison công bố, còn `correction_trial_count` là scope correction
+  thật sự
+- `manifest.backtest_summary.multiple_testing_registry_validation` công bố trạng
+  thái validate registry và bắt q-value của comparison dùng scope trial rộng hơn
+- Thêm `backtest.trial_disposition_log`, lưu mọi trial đã chạy nhưng không thắng
+  sau hiệu chỉnh cùng các cấu hình bị loại trước phase đánh giá cuối; manifest
+  công bố `trial_disposition_validation`
+- Thêm `backtest.window_sensitivity`, chạy lại ba chiến lược công bố trên cửa
+  sổ gần 50/200/500 kỳ; các cửa sổ phụ được đưa vào `multiple_testing_trials`
+  và manifest công bố `window_sensitivity_validation`
+- Thêm `block_bootstrap_check` cho comparison và trial registry của backtest,
+  so khoảng bootstrap theo block kỳ liên tiếp với khoảng chuẩn hiện tại; manifest
+  công bố `block_bootstrap_validation`
+
+## 15/06/2026
+
+### Fairness audit 2.0.0
+
+- Tách trạng thái `statistically_notable`, `practically_large`, `both`, `pass`
+  và `skipped`
+- Không còn gộp mọi lý do vào nhãn `watch`
+- Công bố riêng p-value, q-value, độ lớn hiệu ứng và ngưỡng thực dụng
+- Khóa registry ngưỡng độ lớn hiệu ứng, đơn vị, phạm vi áp dụng và phân tích độ
+  nhạy theo hệ số ngưỡng trong `site/data/audit-summary.json`
+- Công bố họ phụ thuộc, ma trận cặp kiểm định và q-value Benjamini-Hochberg theo
+  từng họ phụ thuộc để đọc các phép kiểm dùng chung dữ liệu
+- Phân rã kiểm định vị trí chữ số theo hạng giải và loại kết quả khi
+  `result_json.tiers` có đủ cấu trúc, không sinh p-value mới cho từng hạng
+- Kết quả snapshot có 2 phép nổi bật thống kê, 16 phép có hiệu ứng vượt ngưỡng
+  thực dụng và 0 phép đạt đồng thời cả hai điều kiện
+
+### Backtest 2.0.0
+
+- Đưa `recent_frequency` vào walk-forward đầy đủ
+- Tăng phạm vi hiệu chỉnh từ 16 lên 24 phép so sánh
+- Giữ baseline kỳ vọng chính xác thay vì một lần bốc ngẫu nhiên
+- Kết quả snapshot có 0 tín hiệu thắng sau hiệu chỉnh và 2 tín hiệu thô thuộc
+  Max 3D
+
+### Prediction ledger 3.0.0
+
+- Thêm chuỗi SHA-256 append-only
+- Thêm hash toàn bộ lịch sử dữ liệu dùng cho mỗi dự đoán mới
+- Thêm timezone và phiên bản code
+- Thêm test phát hiện sửa, xóa, chèn và nối sự kiện chưa niêm phong
+
+### Data quality 1.0.0
+
+- Tách hợp lệ cấu trúc, nguồn gốc và mức đối chiếu nguồn
+- Thêm quality report cho tám sản phẩm
+- Thêm snapshot manifest có hash và số dòng
+- Giữ lịch sử nguồn khi một quan sát mới thay thế quan sát cũ
+
+## Quy tắc cập nhật
+
+Mỗi thay đổi phương pháp cần ghi
+
+- ngày áp dụng
+- phiên bản cũ và mới
+- phạm vi dữ liệu bị ảnh hưởng
+- thay đổi công thức hoặc ngưỡng
+- kết quả trước và sau nếu có
+- đường dẫn test tái lập

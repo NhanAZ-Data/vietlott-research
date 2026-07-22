@@ -16,3 +16,4 @@ LICENSE text eol=lf
 *.yml text eol=lf
 *.yaml text eol=lf
 datasets/** linguist-generated=true
+site/data/** linguist-generated=true

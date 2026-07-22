@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Phương pháp thống kê và đánh giá dự đoán của Vietlott Data Research.">
+  <meta name="theme-color" content="#102a2b">
+  <title>Phương pháp nghiên cứu | Vietlott Data Research</title>
+  <link rel="icon" href="assets/favicon.svg?v=20260614-9" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,500;1,400;1,500&amp;display=swap">
+  <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/3.0.0/uicons-regular-rounded/css/uicons-regular-rounded.css">
+  <link rel="stylesheet" href="assets/styles.css?v=20260618-6">
+</head>
+<body>
+  <a class="skip-link" href="#main">Bỏ qua điều hướng</a>
+  <header class="site-header">
+    <a class="brand" href="index.html">
+      <span class="brand-mark" aria-hidden="true"><i class="fi fi-rr-crystal-ball"></i></span>
+      <span class="brand-copy">Vietlott<br>Data Research</span>
+    </a>
+    <nav class="site-nav document-nav" aria-label="Điều hướng chính">
+      <a href="index.html">Báo cáo</a>
+      <a href="phuong-phap.html" aria-current="page">Phương pháp</a>
+      <a href="du-lieu.html">Dữ liệu</a>
+      <a class="nav-github" href="https://github.com/NhanAZ-Data/vietlott-research">GitHub</a>
+    </nav>
+  </header>
+
+  <main id="main" class="document-shell">
+    <header class="document-hero">
+      <p class="eyebrow">Phương pháp phiên bản 1.0.0</p>
+      <h1>Đo sai lệch trước khi kể câu chuyện.</h1>
+      <p>
+        Trang này mô tả cách chọn mẫu, công thức, giả định, quy tắc dự đoán và
+        những điều dữ liệu hiện tại không thể kết luận.
+      </p>
+    </header>
+
+    <div class="document-layout">
+      <aside class="document-toc">
+        <strong>Mục lục</strong>
+        <a href="#cau-hoi">Câu hỏi nghiên cứu</a>
+        <a href="#mau">Mẫu phân tích</a>
+        <a href="#tan-suat">Tần suất và đồng đều</a>
+        <a href="#thoi-gian">Thời gian và mùa vụ</a>
+        <a href="#cau-truc">Cấu trúc tổ hợp</a>
+        <a href="#du-doan">Dự đoán và backtest</a>
+        <a href="#kiem-dinh">Kiểm định công bằng</a>
+        <a href="#gioi-han">Giới hạn</a>
+        <a href="#thuat-ngu">Thuật ngữ</a>
+      </aside>
+
+      <article class="research-article">
+        <section id="cau-hoi">
+          <p class="article-index">01</p>
+          <h2>Câu hỏi nghiên cứu</h2>
+          <p>
+            Giả thuyết ban đầu là một hệ quay cơ học có thể chịu sai lệch rất nhỏ
+            từ khối lượng bi, bề mặt, độ mòn, luồng khí, rung động hoặc môi trường.
+            Với trò chơi điện tử, giả thuyết phù hợp hơn là chuỗi số có đáp ứng các
+            đặc tính của một quá trình giả ngẫu nhiên hay không.
+          </p>
+          <div class="hypothesis-grid">
+            <div>
+              <strong>H0</strong>
+              <p>Tần suất biên phù hợp với mô hình đồng đều trong giới hạn sai số lấy mẫu.</p>
+            </div>
+            <div>
+              <strong>H1</strong>
+              <p>Có sai lệch đủ lớn, ổn định và lặp lại ngoài mẫu để bác bỏ H0.</p>
+            </div>
+          </div>
+          <p class="callout">
+            Một hệ vật lý có thể tất định ở cấp vi mô nhưng vẫn không dự đoán được
+            trong thực tế. "Không ngẫu nhiên tuyệt đối" không đồng nghĩa "có lợi thế dự báo".
+          </p>
+          <p class="callout evidence">
+            <strong>Kết luận hiện tại của dự án</strong>
+            Các bài thử trên dữ liệu quá khứ chưa cho thấy chiến lược đang công bố
+            vượt cách chọn ngẫu nhiên một cách đáng tin cậy. Vì vậy dự án hiện không
+            có bằng chứng để khuyên ưu tiên bất kỳ bộ số nào.
+          </p>
+        </section>
+
+        <section id="mau">
+          <p class="article-index">02</p>
+          <h2>Mẫu phân tích và chất lượng dữ liệu</h2>
+          <p>
+            Mỗi phép phân tích mặc định chỉ dùng bản ghi có
+            <code>draw_status=confirmed</code>. Các kỳ chưa được xác nhận vẫn được giữ
+            để kiểm toán nhưng bị loại khỏi mẫu. Khóa kỳ quay là cặp
+            <code>(product, draw_id)</code>.
+          </p>
+          <ul class="research-list">
+            <li>Kiểm tra miền số, số lượng phần tử và tính duy nhất theo luật trò chơi</li>
+            <li>Loại bản ghi trùng và kiểm tra giải thưởng mồ côi</li>
+            <li>Giữ nguồn, thời điểm đọc và URL kỳ quay để truy vết</li>
+            <li>Phân biệt nguồn chính thức với bản ghi chờ đối chiếu</li>
+            <li>Không tự suy diễn rằng một mã kỳ phải tồn tại chỉ vì nằm giữa hai mã khác</li>
+          </ul>
+        </section>
+
+        <section id="tan-suat">
+          <p class="article-index">03</p>
+          <h2>Tần suất, khoảng tin cậy và đồng đều</h2>
+          <p>
+            Với trò chơi chọn <em>k</em> số từ <em>N</em> số, xác suất biên của một số
+            cụ thể trong mỗi kỳ là <code>p = k / N</code>. Sau <em>n</em> kỳ, số lần
+            xuất hiện kỳ vọng là <code>E = n × p</code>.
+          </p>
+          <div class="formula-card">
+            <span>Độ lệch chuẩn hóa</span>
+            <strong>z = (quan sát - n × p) / √(n × p × (1 - p))</strong>
+          </div>
+          <p>
+            Mỗi số còn có khoảng tin cậy Wilson 95%. Khi kiểm tra đồng thời nhiều
+            số, báo cáo dùng Benjamini-Hochberg để kiểm soát tỷ lệ phát hiện sai.
+            Giá trị p thô không được dùng một mình để gắn nhãn "bất thường".
+          </p>
+          <h3>Kiểm định chi bình phương</h3>
+          <p>
+            Tổng thể tần suất được so với phân phối đồng đều bằng thống kê chi bình
+            phương. Vì dữ liệu chọn không hoàn lại làm các số trong cùng kỳ phụ thuộc,
+            giá trị p trên web là xấp xỉ mô tả. Cohen's w được báo cùng để đo độ lớn.
+          </p>
+          <div class="scale-table">
+            <div><span>w &lt; 0,05</span><strong>Rất nhỏ</strong></div>
+            <div><span>0,05 đến 0,10</span><strong>Nhỏ</strong></div>
+            <div><span>0,10 đến 0,30</span><strong>Vừa</strong></div>
+            <div><span>w ≥ 0,30</span><strong>Lớn</strong></div>
+          </div>
+          <h3>Entropy chuẩn hóa</h3>
+          <p>
+            Entropy bằng 1 khi tần suất hoàn toàn đều. Giá trị gần 1 không chứng minh
+            cơ chế hoàn hảo, nhưng cho thấy phân bố biên khó phân biệt với đồng đều.
+          </p>
+        </section>
+
+        <section id="thoi-gian">
+          <p class="article-index">04</p>
+          <h2>Độ vắng, thời gian và mùa vụ</h2>
+          <p>
+            "Lâu chưa xuất hiện" được đo bằng số kỳ quay, không chỉ bằng ngày lịch.
+            Cách này không làm Keno có vẻ vắng lâu hơn hoặc ngắn hơn chỉ vì lịch quay
+            dày hơn sản phẩm khác.
+          </p>
+          <p>
+            Tần suất theo tháng và theo thứ trong tuần luôn được chia cho số kỳ thực tế
+            trong từng nhóm. Biểu đồ tháng vẫn chỉ là mô tả mùa vụ. Phép kiểm thời tiết
+            riêng sử dụng dữ liệu tái phân tích ERA5-Land theo địa điểm quay và ngày quay.
+          </p>
+          <p>
+            Repo ghi nhận Trung tâm Quay số tại số 23 Lạc Trung đến ngày 21/01/2025 và
+            tại số 18 Tam Trinh từ ngày 22/01/2025 theo thông báo chính thức của Vietlott.
+            Mỗi ngày chỉ tạo một mẫu phân tích, kể cả khi Keno có nhiều kỳ trong ngày.
+          </p>
+          <p>
+            Thông báo năm 2025 xác nhận Lạc Trung là địa điểm ngay trước khi chuyển.
+            Repo tạm áp dụng địa điểm này ngược đến ngày đầu dataset vì chưa tìm thấy
+            thông báo đổi địa điểm cũ hơn. Đây là giả định có ghi dấu và phải sửa nếu
+            xuất hiện nguồn lịch sử chính xác hơn.
+          </p>
+          <div class="callout warning">
+            Dữ liệu này đo thời tiết ngoài trời theo ô lưới khoảng 11 km, không phải nhiệt
+            độ trong phòng quay. Phép kiểm đã trừ trung bình trong cùng tháng-năm và địa
+            điểm, nhưng vẫn chưa kiểm soát được điều hòa, máy quay, bộ bi, bảo trì hoặc
+            luồng khí. Kết quả chỉ dùng để sàng lọc giả thuyết, không kết luận nhân quả.
+          </div>
+        </section>
+
+        <section id="cau-truc">
+          <p class="article-index">05</p>
+          <h2>Cấu trúc tổ hợp và vị trí</h2>
+          <p>
+            Báo cáo theo dõi tổng, độ trải, chẵn lẻ, số cặp liên tiếp, cặp đồng xuất
+            hiện và phân bố theo vị trí. Với Mega, Power, Lotto và Keno, kết quả được
+            công bố theo thứ tự tăng dần. Vì vậy "vị trí 1" là số nhỏ nhất của tổ hợp,
+            không phải viên bi ra khỏi máy đầu tiên.
+          </p>
+          <p>
+            Mỗi tổ hợp cụ thể hợp lệ có cùng xác suất trong mô hình đồng đều. Một dãy
+            như 01-02-03-04-05-06 không ít khả năng hơn một dãy cụ thể nhìn lộn xộn.
+            Nhóm "các dãy dễ nhận ra" nhỏ hơn rất nhiều so với nhóm "các dãy trông ngẫu nhiên",
+            nên trực giác thường so sánh hai lớp không cùng kích thước.
+          </p>
+        </section>
+
+        <section id="du-doan">
+          <p class="article-index">06</p>
+          <h2>Dự đoán, mốc so sánh và chống nhìn trước đáp án</h2>
+          <p>
+            Website công bố ba cách chọn cho mỗi sản phẩm đang hoạt động. Tên phổ
+            thông được đặt trước, tên kỹ thuật được giữ trong ngoặc để người đọc
+            có thể tra cứu và tái lập.
+          </p>
+          <div class="strategy-list">
+            <article>
+              <strong>Chọn ngẫu nhiên có thể lặp lại</strong>
+              <span>uniform seeded baseline</span>
+              <p>Đây là mốc so sánh công bằng. Một mã số giúp lần sau tạo lại đúng bộ số đã chọn.</p>
+            </article>
+            <article>
+              <strong>Ưu tiên số nổi bật gần đây</strong>
+              <span>recent frequency</span>
+              <p>Xếp hạng các số xuất hiện lệch nhiều trong 200 kỳ gần nhất, hoặc 1.000 kỳ với Keno.</p>
+            </article>
+            <article>
+              <strong>Kết hợp ba dấu hiệu lịch sử</strong>
+              <span>balanced signal</span>
+              <p>Gộp tần suất gần đây, toàn bộ lịch sử và số kỳ vắng mặt theo trọng số cố định.</p>
+            </article>
+          </div>
+          <div class="formula-card">
+            <span>Điểm cân bằng cho tập số</span>
+            <strong>0,55 × z_gần - 0,25 × z_toàn_kỳ + 0,12 × độ_vắng_chuẩn_hóa</strong>
+          </div>
+          <h3>Sổ sự kiện bất biến</h3>
+          <p>
+            File <code>predictions/ledger.jsonl</code> là sổ append-only. Sự kiện
+            <code>prediction</code> ghi dự báo trước. Khi có kỳ mới, chương trình thêm
+            một sự kiện <code>evaluation</code> tham chiếu dự báo cũ, thay vì sửa dòng cũ.
+          </p>
+          <h3>Quy tắc chấm đúng, gần đúng và sai</h3>
+          <p>
+            Đúng toàn bộ nghĩa là mọi số chính, số đặc biệt hoặc mọi vị trí chữ số
+            đều khớp. Gần đúng chỉ khi thiếu đúng một thành phần so với dự đoán đầy
+            đủ. Các trường hợp còn lại tính là sai, nhưng báo cáo vẫn lưu chính xác
+            số lượng số hoặc vị trí đã trùng để không làm mất thông tin.
+          </p>
+          <h3>Baseline của sổ dự đoán ngoài mẫu</h3>
+          <p>
+            Mỗi lượt đã chấm có xác suất nền riêng cho đúng toàn bộ, gần đúng và
+            điểm kỳ vọng theo cùng sản phẩm. Website công bố khoảng dự đoán 95%
+            bằng phân phối Poisson-binomial, không gộp tỷ lệ giữa các trò chơi có
+            không gian kết quả khác nhau. Một chiến lược chỉ được công bố có lợi
+            thế so với nền sau khi đủ cỡ mẫu tối thiểu và vượt phép so sánh cặp
+            trên cùng kỳ đích.
+          </p>
+          <h3>Thử lại theo dòng thời gian</h3>
+          <p>
+            Cách này còn gọi là walk-forward backtest. Tại kỳ kiểm tra <em>t</em>,
+            phương pháp chỉ được dùng dữ liệu trước <em>t</em>. Mỗi dự báo được so
+            với điểm kỳ vọng chính xác của cách chọn đồng đều. Cách tính này loại bỏ
+            nhiễu do vô tình lấy một mẫu baseline may hoặc rủi hơn bình thường.
+          </p>
+          <h3>Backtest đang chạy chính xác những gì</h3>
+          <ol class="research-list">
+            <li>
+              Tập số như Mega, Power, Lotto và Keno dùng tối đa 1.000 kỳ kiểm tra,
+              riêng Keno tối đa 5.000 kỳ. Mốc huấn luyện ban đầu được tính từ
+              <code>min(200, max(30, một phần ba lịch sử))</code>. Nếu cần giới hạn
+              số kỳ kiểm tra, phần lịch sử cũ hơn được giữ làm dữ liệu huấn luyện,
+              nên số kỳ thật trước lần kiểm tra đầu có thể lớn hơn mốc này.
+            </li>
+            <li>
+              Trò chơi theo chuỗi chữ số dùng tối đa 1.000 kỳ kiểm tra, riêng
+              Bingo18 tối đa 5.000 kỳ. Mốc huấn luyện ban đầu dùng công thức tương
+              tự nhưng chặn trên ở 100 kỳ. Số kỳ thật trước lần kiểm tra đầu cũng
+              có thể lớn hơn khi cửa sổ kiểm tra bị giới hạn.
+            </li>
+            <li>
+              Sau khi dự đoán và chấm kỳ <em>t</em>, kết quả thật của kỳ đó mới
+              được thêm vào bộ đếm. Vì vậy dữ liệu tương lai không đi ngược vào
+              bước tạo dự đoán.
+            </li>
+            <li>
+              Cửa sổ walk-forward được tách theo thời gian: nửa đầu là phase
+              chọn/khóa công thức, nửa sau là phase đánh giá cuối. Các số liệu
+              <code>samples</code>, <code>target_scope</code>, baseline và comparison
+              công bố chỉ dùng phase đánh giá cuối.
+            </li>
+          </ol>
+          <h3>Công thức cho sản phẩm chọn tập số</h3>
+          <p>
+            Với mỗi số, chương trình tính độ lệch chuẩn hóa
+            <code>z = (số lần xuất hiện - số lần kỳ vọng) / độ lệch chuẩn kỳ vọng</code>
+            trên toàn lịch sử, cửa sổ gần và 50 kỳ gần nhất. Cửa sổ gần là 200 kỳ,
+            riêng Keno là 500 kỳ trong backtest hiện tại.
+          </p>
+          <div class="formula-card">
+            <span>Kết hợp ba dấu hiệu</span>
+            <strong>0,40 × z_ngắn + 0,30 × z_gần - 0,15 × z_dài + 0,15 × (độ_vắng - 1)</strong>
+          </div>
+          <div class="formula-card">
+            <span>Tần suất cửa sổ gần</span>
+            <strong>0,60 × z_ngắn + 0,40 × z_gần</strong>
+          </div>
+          <div class="formula-card">
+            <span>Tín hiệu kiểm định công bằng</span>
+            <strong>0,45 × nóng_dài + 0,25 × gần + 0,15 × ngắn + 0,15 × áp_lực_cặp</strong>
+          </div>
+          <p>
+            Các tín hiệu của phương pháp kiểm định được chặn trong đoạn từ -4 đến
+            4 để một giá trị cực đoan không chi phối toàn bộ điểm. Áp lực cặp là
+            trung bình của tối đa năm độ lệch đồng xuất hiện dương mạnh nhất liên
+            quan tới số đó. Thuật toán chọn lần lượt số có điểm cao nhất và cộng
+            thêm <code>0,12 × thưởng_cặp</code> với các số đã chọn.
+          </p>
+          <h3>Công thức cho sản phẩm theo vị trí chữ số</h3>
+          <p>
+            Mỗi vị trí được chấm riêng. Chiến lược cân bằng dùng
+            <code>0,40 × z_ngắn + 0,30 × z_gần - 0,20 × z_dài</code>.
+            Chiến lược tần suất gần dùng
+            <code>0,60 × z_ngắn + 0,40 × z_gần</code>.
+            Chiến lược kiểm định dùng
+            <code>0,45 × nóng_dài + 0,35 × gần + 0,20 × ngắn</code>.
+            Chữ số có điểm cao nhất ở từng vị trí tạo thành chuỗi dự đoán.
+          </p>
+          <h3>Baseline, điểm số và phép kiểm</h3>
+          <p>
+            Với tập số, baseline dùng kỳ vọng và phân bố siêu bội chính xác. Nếu
+            chọn <em>k</em> số trong <em>N</em> số thì số trùng kỳ vọng mỗi kỳ là
+            <code>k² / N</code>. Với chuỗi chữ số, chương trình đếm toàn bộ chuỗi
+            hợp lệ và tính điểm tốt nhất kỳ vọng trước các kết quả thật của từng kỳ.
+            Vì vậy baseline backtest không phụ thuộc seed hoặc phiên bản mô hình.
+          </p>
+          <p>
+            Với tập số, điểm là số lượng số chính trùng kết quả. Số đặc biệt chưa
+            được tính trong backtest hiện tại. Với chuỗi chữ số, điểm là số vị trí
+            khớp nhiều nhất giữa dự đoán và các kết quả công bố trong kỳ. Tại mỗi
+            kỳ, chương trình tính <code>d = điểm_chiến_lược - điểm_kỳ_vọng_đồng_đều</code>.
+          </p>
+          <div class="formula-card">
+            <span>Kiểm định chênh lệch ghép cặp</span>
+            <strong>z = trung_bình(d) / (độ_lệch_chuẩn(d) / √n)</strong>
+          </div>
+          <p>
+            p-value hai phía được xấp xỉ bằng phân bố chuẩn. Toàn bộ p-value của ba
+            chiến lược công bố và các biến thể tham số đã đăng ký/thử trên mọi sản
+            phẩm sau đó được hiệu chỉnh Benjamini-Hochberg.
+            Một chiến lược chỉ được đánh dấu vượt baseline khi trung bình chênh lệch
+            dương và <code>q toàn hệ thống &lt; 0,05</code>. Ba chiến lược ứng viên là
+            "Kết hợp ba dấu hiệu", "Tần suất cửa sổ gần" và
+            "Tín hiệu kiểm định công bằng".
+          </p>
+          <p>
+            Báo cáo cũng lưu <code>window_sensitivity</code>: ba chiến lược công bố
+            được chạy lại trên các cửa sổ gần 50, 200 và 500 kỳ. Cửa sổ mặc định
+            vẫn là trial công bố, còn các cửa sổ phụ được đăng ký như biến thể tham
+            số và cùng đi vào hiệu chỉnh Benjamini-Hochberg.
+          </p>
+          <p>
+            Mỗi comparison và trial trong registry có thêm
+            <code>block_bootstrap_check</code>. Trường này resample các block kỳ
+            liên tiếp để so sánh khoảng 95% của block bootstrap với khoảng chuẩn
+            hiện tại, nhưng không đổi p-value, q-value hoặc trạng thái thắng baseline.
+          </p>
+          <p>
+            Mỗi comparison công bố có thêm <code>paired_permutation_test</code> và
+            <code>effect_summary</code>. Ngoài ra
+            <code>strategy_pairwise_comparisons</code> so trực tiếp ba chiến lược trên
+            cùng tập kỳ mục tiêu, kèm khoảng tin cậy 95%, permutation p-value và hiệu
+            ứng tuyệt đối/tương đối. Các trường này là chẩn đoán phụ, không thay thế
+            hiệu chỉnh Benjamini-Hochberg so với baseline đồng đều.
+          </p>
+          <p>
+            Báo cáo cũng lưu <code>trial_disposition_log</code>: mọi trial đã chạy
+            nhưng không thắng sau hiệu chỉnh, cùng các cấu hình bị loại trước phase
+            đánh giá cuối và lý do loại. Nhật ký này giữ lại kết quả âm để tránh
+            chỉ công bố những cấu hình trông có lợi.
+          </p>
+          <p>
+            Mỗi chênh lệch còn đi kèm khoảng ước lượng 95% theo xấp xỉ chuẩn
+            <code>trung_bình(d) ± 1,96 × sai_số_chuẩn</code>. Khoảng này giúp đọc
+            độ bất định của kích thước chênh lệch, thay vì chỉ nhìn p-value.
+          </p>
+          <p class="callout warning">
+            p thô vẫn được công bố để kiểm tra độ nhạy, nhưng không còn được dùng
+            làm kết luận tổng quan. Hiệu chỉnh nhiều phép thử làm giảm nguy cơ một
+            vài tín hiệu trông nổi bật chỉ vì đã thử nhiều cặp chiến lược và sản phẩm.
+            Backtest vẫn là bằng chứng thăm dò, không thay thế tập xác nhận ngoài mẫu.
+          </p>
+          <p>
+            Toàn bộ triển khai có thể kiểm tra trực tiếp tại
+            <a href="https://github.com/NhanAZ-Data/vietlott-research/blob/main/src/vietlott_analytics/predictions.py"><code>src/vietlott_analytics/predictions.py</code></a>
+            và các kiểm thử tại
+            <a href="https://github.com/NhanAZ-Data/vietlott-research/blob/main/tests/test_prediction_ledger.py"><code>tests/test_prediction_ledger.py</code></a>.
+          </p>
+          <p class="callout">
+            Backtest tốt vẫn có thể là overfitting. Bằng chứng mạnh hơn phải đến từ
+            chuỗi dự báo được đóng băng sau khi thuật toán đã cố định.
+          </p>
+        </section>
+
+        <section id="kiem-dinh">
+          <p class="article-index">07</p>
+          <h2>Kiểm định công bằng thống kê</h2>
+          <p>
+            Bộ kiểm định công bằng thống kê là lớp độc lập với phần dự đoán. Nó không cố tìm bộ số
+            cho kỳ sau, mà hỏi một câu khác: dữ liệu công khai hiện có lệch khỏi mô hình ngẫu nhiên
+            đến mức nào, lệch ở nhóm nào và có cần theo dõi tiếp hay không.
+          </p>
+          <div class="strategy-list">
+            <article>
+              <strong>Phân bố</strong>
+              <span>chi-square, G-test, entropy, hypergeometric</span>
+              <p>Đếm tần suất số, chữ số, chẵn lẻ, tổng chữ số và so với phân bố kỳ vọng.</p>
+            </article>
+            <article>
+              <strong>Thời gian</strong>
+              <span>runs test, autocorrelation, split-half</span>
+              <p>Kiểm tra chuỗi kết quả có phụ thuộc theo thời gian hoặc đổi chế độ rõ không.</p>
+            </article>
+            <article>
+              <strong>Đồng xuất hiện</strong>
+              <span>pair chi-square, repeat-rate</span>
+              <p>Đọc các cặp số hoặc chuỗi lặp lại, nhưng luôn ghi chú rủi ro phụ thuộc trong cùng kỳ.</p>
+            </article>
+          </div>
+          <p>
+            Mỗi phép kiểm định xuất ra thống kê, p-value, q-value sau hiệu chỉnh Benjamini-Hochberg,
+            kích thước hiệu ứng và diễn giải ngắn. Website không còn gộp mọi lý do vào nhãn
+            <code>watch</code>. <code>statistically_notable</code> nghĩa là q sau hiệu chỉnh nhỏ
+            hơn 0,05 nhưng hiệu ứng chưa đủ lớn. <code>practically_large</code> nghĩa là hiệu ứng
+            đạt ngưỡng đã khóa nhưng q chưa nhỏ. <code>both</code> nghĩa là đạt cả hai điều kiện.
+            <code>pass</code> nghĩa là chưa đạt điều kiện nào và <code>skipped</code> là phép kiểm
+            được hoãn có ghi lý do.
+          </p>
+          <p class="callout warning">
+            Đây không phải kiểm toán vận hành độc lập theo nghĩa pháp lý. Dữ liệu công khai không có
+            mã máy, mã bộ bi, log bảo trì, điều kiện môi trường và biên bản kiểm định thiết bị. Vì vậy
+            kết luận mạnh nhất của lớp này chỉ là tín hiệu thống kê cần quan sát hoặc cần bổ sung dữ liệu.
+          </p>
+        </section>
+
+        <section id="gioi-han">
+          <p class="article-index">08</p>
+          <h2>Giới hạn hiện tại</h2>
+          <ul class="research-list">
+            <li>Không có metadata máy quay, bộ bi, bảo trì, địa điểm và môi trường</li>
+            <li>Kiểm định chi bình phương hiện dùng p-value xấp xỉ</li>
+            <li>Các kết quả nhiều hạng giải trong Max 3D không hoàn toàn độc lập</li>
+            <li>Phân tích cặp là hậu nghiệm và có rủi ro chọn mẫu đẹp</li>
+            <li>Sổ dự đoán mới bắt đầu nên số lượt đánh giá ngoài mẫu còn ít</li>
+            <li>Dữ liệu lịch sử không bảo đảm quy trình tương lai giữ nguyên</li>
+          </ul>
+        </section>
+
+        <section id="thuat-ngu">
+          <p class="article-index">09</p>
+          <h2>Thuật ngữ cho người mới</h2>
+          <dl class="glossary">
+            <div><dt>Baseline</dt><dd>Mốc đơn giản phải vượt qua. Ở đây là chọn đồng đều.</dd></div>
+            <div><dt>p-value</dt><dd>Mức độ dữ liệu khó xảy ra nếu mô hình tham chiếu đúng, không phải xác suất mô hình đúng.</dd></div>
+            <div><dt>Kích thước hiệu ứng</dt><dd>Độ lớn thực tế của khác biệt, tách khỏi ảnh hưởng của cỡ mẫu.</dd></div>
+            <div><dt>Entropy</dt><dd>Thước đo mức phân tán. Gần 1 nghĩa là tần suất gần đồng đều.</dd></div>
+            <div><dt>FDR</dt><dd>Cách kiểm soát tỷ lệ phát hiện sai khi thử nhiều giả thuyết cùng lúc.</dd></div>
+            <div><dt>Rò rỉ dữ liệu</dt><dd>Khi thông tin tương lai vô tình đi vào bước huấn luyện hoặc chọn mô hình.</dd></div>
+          </dl>
+        </section>
+      </article>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="shell footer-grid">
+      <div>
+        <span class="brand-mark" aria-hidden="true"><i class="fi fi-rr-crystal-ball"></i></span>
+        <p>Phương pháp được viết để có thể phản biện và tái lập.</p>
+        <a class="icon-credit" href="https://www.flaticon.com/free-icon-font/crystal-ball_8034121">Biểu tượng từ UIcons by Flaticon</a>
+      </div>
+      <div><strong>Đi tiếp</strong><a href="index.html">Báo cáo tương tác</a><a href="du-lieu.html">Dữ liệu</a></div>
+      <div><strong>Lưu ý</strong><p>Không phải hệ thống bảo đảm trúng thưởng hoặc tư vấn tài chính.</p></div>
+    </div>
+  </footer>
+</body>
+</html>

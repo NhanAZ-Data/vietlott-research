@@ -16,7 +16,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: vietlott-dataset-update
+  group: vietlott-main-writer
   cancel-in-progress: false
 
 jobs:

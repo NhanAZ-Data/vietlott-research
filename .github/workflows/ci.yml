@@ -1,4 +1,4 @@
-name: Kiểm tra collector
+name: Kiểm tra dự án Vietlott
 
 on:
   push:
