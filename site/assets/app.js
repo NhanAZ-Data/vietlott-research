@@ -3,6 +3,8 @@ const state = {
   predictions: null,
   auditSummary: null,
   product: null,
+  predictionProduct: null,
+  predictionMode: "all",
   selectedNumber: null,
   reportCache: new Map(),
   reportPromises: new Map(),
@@ -31,18 +33,8 @@ async function initialize() {
   state.predictions = predictions;
   state.auditSummary = auditSummary;
   renderManifest(manifest);
-  renderAuditOverview(auditSummary);
-  renderProductTabs(manifest.products);
   renderPredictionShell(predictions, manifest.products);
-
-  const requested = new URLSearchParams(window.location.search).get("product");
-  const initial = manifest.products.some((item) => item.slug === requested)
-    ? requested
-    : "power655";
-  await selectProduct(initial);
-  renderProjectVerdict(manifest.products, manifest.backtest_summary).catch((error) => {
-    console.error("Không tổng hợp được kết luận toàn bộ sản phẩm", error);
-  });
+  renderPredictionFocusVerdict(manifest.backtest_summary);
   if (initialHash) {
     window.requestAnimationFrame(() => {
       const target = document.querySelector(initialHash);
@@ -53,6 +45,16 @@ async function initialize() {
       document.documentElement.style.scrollBehavior = previousBehavior;
     });
   }
+}
+
+function renderPredictionFocusVerdict(backtestSummary = {}) {
+  const raw = Number(backtestSummary.unadjusted_winning_comparisons || 0);
+  const adjusted = Number(backtestSummary.adjusted_winning_comparisons || 0);
+  const total = Number(backtestSummary.comparison_count || 0);
+  text(
+    "prediction-current-conclusion",
+    `${raw}/${total} so sánh có tín hiệu thô · ${adjusted} tín hiệu qua hiệu chỉnh · Explorer vẫn giữ tín hiệu yếu trong đường đua.`,
+  );
 }
 
 function setupMenu() {
@@ -139,7 +141,7 @@ async function renderProjectVerdict(products, backtestSummary) {
   renderBacktestOverview(reports);
   text(
     "prediction-current-conclusion",
-    `${conclusion} ${predictionOutcomeConclusion()} Các bộ số dưới đây là thí nghiệm, không phải gợi ý mua vé.`,
+    `${unadjustedComparisons}/${backtestSummary?.comparison_count ?? reports.length * 3} so sánh có tín hiệu thô; ${adjustedComparisons} tín hiệu qua hiệu chỉnh. Explorer vẫn giữ các tín hiệu yếu trong đường đua.`,
   );
 }
 
@@ -239,6 +241,10 @@ function renderManifest(manifest) {
   text("unconfirmed-count", numberFormatter.format(manifest.not_confirmed_rows));
   text("prize-count", numberFormatter.format(manifest.prize_rows));
   text("ribbon-product-count", numberFormatter.format(manifest.products.length));
+  text(
+    "hero-raw-signal-count",
+    numberFormatter.format(manifest.backtest_summary?.unadjusted_winning_comparisons || 0),
+  );
 }
 
 function renderProductTabs(products) {
@@ -1976,6 +1982,10 @@ function renderPredictionShell(predictions, products) {
     numberFormatter.format(outcome.evaluated_predictions || predictions.evaluation_count || 0),
   );
   text("archive-partial-matches", numberFormatter.format(outcome.partial_matches || 0));
+  text("hero-pending-count", numberFormatter.format(predictions.pending_count || 0));
+  text("hero-evaluation-count", compactFormatter.format(predictions.evaluation_count || 0));
+  text("hero-exact-count", numberFormatter.format(outcome.exact || 0));
+  text("hero-ledger-state", integrity.status === "valid" ? "VALID" : "CHECK");
   text(
     "prediction-near-rule",
     `${outcome.near_rule || ""} ${numberFormatter.format(predictions.evaluation_count)} lượt dự đoán hiện thuộc ${numberFormatter.format(outcome.evaluated_draws || 0)} kỳ quay thực tế. Nếu chọn ngẫu nhiên theo cùng luật chấm, kỳ vọng gần đúng khoảng ${formatExpectedCount(expectedNear)} lượt; thực tế ${formatExpectedCount(outcome.near || 0)} lượt, chênh ${formatSignedExpected(nearExcess)}.${nearIntervalText}${claimGuard} ${outcome.baseline_aggregation_policy || ""}`,
@@ -1984,10 +1994,11 @@ function renderPredictionShell(predictions, products) {
   text(
     "prediction-ledger-integrity",
     integrity.status === "valid" && integrity.root_hash
-      ? `Chuỗi hash hợp lệ gồm ${numberFormatter.format(integrity.event_count)} sự kiện. Hash gốc ${integrity.root_hash}.`
+      ? `Ledger hợp lệ · ${numberFormatter.format(integrity.event_count)} sự kiện · SHA-256`
       : "Sổ dự đoán chưa có chuỗi hash hợp lệ để công bố.",
   );
   setupPredictionArchive();
+  setupPredictionModes();
   const select = document.getElementById("prediction-product");
   const available = products.filter((product) => predictions.latest[product.slug]);
   select.innerHTML = available
@@ -2002,8 +2013,36 @@ function renderPredictionShell(predictions, products) {
     : available.some((item) => item.slug === "keno")
       ? "keno"
       : available[0]?.slug;
-  select.addEventListener("change", () => renderPredictionCards(select.value));
-  renderPredictionCards(select.value);
+  select.addEventListener("change", () => selectPredictionProduct(select.value));
+  selectPredictionProduct(select.value);
+}
+
+function setupPredictionModes() {
+  document.querySelectorAll("[data-prediction-mode]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.predictionMode = button.dataset.predictionMode || "all";
+      document.querySelectorAll("[data-prediction-mode]").forEach((item) => {
+        const active = item.dataset.predictionMode === state.predictionMode;
+        item.classList.toggle("active", active);
+        item.setAttribute("aria-pressed", String(active));
+      });
+      if (state.predictionProduct) renderPredictionCards(state.predictionProduct);
+    });
+  });
+}
+
+function selectPredictionProduct(slug) {
+  state.predictionProduct = slug;
+  renderPredictionCards(slug);
+  text("signal-radar-status", "Đang quét...");
+  const list = document.getElementById("signal-radar-list");
+  if (list) list.innerHTML = '<div class="signal-loading">Đang nạp tín hiệu của sản phẩm...</div>';
+  loadProductReport(slug)
+    .then(renderSignalRadar)
+    .catch(() => {
+      text("signal-radar-status", "Không đọc được tín hiệu");
+      if (list) list.innerHTML = '<div class="signal-loading">Dữ liệu tín hiệu tạm thời chưa khả dụng.</div>';
+    });
 }
 
 function setupPredictionArchive() {
@@ -2101,9 +2140,13 @@ function predictionPendingRows(predictions) {
 }
 
 function renderPredictionCards(slug) {
-  const predictions = state.predictions.latest[slug] || [];
+  const allPredictions = state.predictions.latest[slug] || [];
+  const predictions = allPredictions.filter((prediction) => {
+    const mode = predictionModeForStrategy(prediction.strategy);
+    return state.predictionMode === "all" || state.predictionMode === mode;
+  });
   const product = state.manifest.products.find((item) => item.slug === slug);
-  const latest = predictions[0];
+  const latest = allPredictions[0];
   text(
     "prediction-ledger-status",
     latest
@@ -2113,6 +2156,7 @@ function renderPredictionCards(slug) {
   document.getElementById("prediction-cards").innerHTML = predictions
     .map((prediction) => {
       const copy = predictionStrategyCopy(prediction.strategy);
+      const mode = predictionModeForStrategy(prediction.strategy);
       const values = prediction.prediction.numbers;
       const output = values
         ? `
@@ -2122,8 +2166,11 @@ function renderPredictionCards(slug) {
           </div>`
         : `<div class="prediction-sequence">${escapeHtml(prediction.prediction.sequence)}</div>`;
       return `
-        <article class="prediction-card${prediction.strategy === "audit_signal" ? " primary" : ""}">
-          <span class="strategy-name">${escapeHtml(copy.title)}</span>
+        <article class="prediction-card mode-${escapeHtml(mode)}${prediction.strategy === "audit_signal" ? " primary" : ""}">
+          <div class="prediction-card-head">
+            <span class="strategy-name">${escapeHtml(copy.title)}</span>
+            <span class="model-mode">${escapeHtml(mode)}</span>
+          </div>
           <p class="strategy-description">${escapeHtml(copy.description)}</p>
           ${output}
           <div class="prediction-meta">
@@ -2140,6 +2187,65 @@ function renderPredictionCards(slug) {
   }
   renderPredictionResults(slug);
   if (product) document.getElementById("prediction-product").value = product.slug;
+}
+
+function predictionModeForStrategy(strategy) {
+  if (strategy === "uniform_seeded") return "baseline";
+  if (strategy === "balanced_signal") return "core";
+  return "explorer";
+}
+
+function renderSignalRadar(report) {
+  const tests = [...(report.audit?.tests || [])]
+    .map((test) => ({ ...test, discoveryScore: signalDiscoveryScore(test) }))
+    .sort((left, right) => right.discoveryScore - left.discoveryScore);
+  const suspicious = tests.filter((test) => test.status !== "pass").length;
+  text(
+    "signal-radar-status",
+    `${numberFormatter.format(tests.length)} tín hiệu · ${numberFormatter.format(suspicious)} cần chú ý`,
+  );
+  const container = document.getElementById("signal-radar-list");
+  if (!container) return;
+  container.innerHTML = tests
+    .slice(0, 6)
+    .map((test, index) => {
+      const score = Math.round(test.discoveryScore * 100);
+      const status = test.statistically_notable
+        ? "thống kê"
+        : test.practically_large
+          ? "hiệu ứng"
+          : "shadow";
+      return `
+        <article class="signal-row status-${escapeHtml(test.status || "pass")}">
+          <span class="signal-rank">${String(index + 1).padStart(2, "0")}</span>
+          <div class="signal-copy">
+            <strong>${escapeHtml(test.label)}</strong>
+            <small>${escapeHtml(test.dependency_family_label || test.family || test.algorithm)}</small>
+          </div>
+          <div class="signal-values">
+            <span>p ${formatPValue(test.p_value)}</span>
+            <span>q ${formatPValue(test.q_value_global_bh ?? test.q_value_bh)}</span>
+          </div>
+          <div class="signal-priority" title="Điểm ưu tiên khám phá ${score}/100">
+            <span style="--signal-score:${score}%"></span>
+            <strong>${score}</strong>
+          </div>
+          <span class="signal-tag">${escapeHtml(status)}</span>
+        </article>`;
+    })
+    .join("");
+}
+
+function signalDiscoveryScore(test) {
+  const pValue = Math.max(Number(test.p_value ?? 1), 1e-12);
+  const qValue = Math.max(Number(test.q_value_global_bh ?? test.q_value_bh ?? 1), 1e-12);
+  const threshold = Math.abs(Number(test.practical_effect_threshold || 0));
+  const effect = Math.abs(Number(test.effect_size || 0));
+  const pComponent = Math.min(1, Math.max(0, -Math.log10(pValue) / 6));
+  const qComponent = Math.min(1, Math.max(0, -Math.log10(qValue) / 6));
+  const effectComponent = threshold > 0 ? Math.min(1, effect / threshold / 2) : 0;
+  const statusBonus = test.statistically_notable ? 0.2 : test.practically_large ? 0.12 : 0;
+  return Math.min(1, 0.42 * pComponent + 0.18 * qComponent + 0.4 * effectComponent + statusBonus);
 }
 
 function predictionTargetLabel(prediction) {

@@ -20,17 +20,29 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert 'id="phan-tich"' in index
     assert 'id="du-doan"' in index
     assert 'id="kiem-dinh"' in index
-    assert "assets/app.js?v=20260618-12" in index
+    assert "assets/app.js?v=20260723-1" in index
+    assert "assets/styles.css?v=20260723-1" in index
     assert "archive-summary-heading" in index
     assert "Sổ dự đoán toàn hệ thống" in index
     assert "assets/docs.js?v=20260618-2" in data_page
-    for page in (index, method_page, data_page):
+    for page in (method_page, data_page):
         assert "assets/styles.css?v=20260618-6" in page
+    for page in (index, method_page, data_page):
         assert "assets/favicon.svg?v=20260614-9" in page
-        assert "fonts.googleapis.com/css2?family=Noto+Serif" in page
         assert "cdn-uicons.flaticon.com/3.0.0" in page
         assert "fi-rr-crystal-ball" in page
         assert "Biểu tượng từ UIcons by Flaticon" in page
+    assert "fonts.googleapis.com/css2?family=DM+Mono" in index
+    assert "family=Manrope" in index
+    assert "fonts.googleapis.com/css2?family=Noto+Serif" in method_page
+    assert "fonts.googleapis.com/css2?family=Noto+Serif" in data_page
+    assert 'class="prediction-home"' in index
+    assert 'data-prediction-mode="explorer"' in index
+    assert 'id="signal-radar-list"' in index
+    assert 'class="results-vault"' in index
+    assert 'class="archive-vault"' in index
+    assert 'id="phan-tich" class="analysis-section shell" hidden' in index
+    assert 'id="kiem-dinh" class="audit-overview shell" aria-labelledby="audit-title" hidden' in index
     assert "[hidden]" in styles
     assert "display: none !important" in styles
     assert "min-height: 72px" in styles
@@ -106,6 +118,9 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert 'text("exact-predictions"' in app_script
     assert 'text("archive-evaluated-draws"' in app_script
     assert "renderPredictionResults" in app_script
+    assert "renderSignalRadar" in app_script
+    assert "signalDiscoveryScore" in app_script
+    assert "predictionModeForStrategy" in app_script
     assert "setupPredictionProductFilters" in app_script
     assert 'details class="prediction-latest-panel"' in app_script
     assert "renderPredictionArchiveDetail" in app_script
@@ -120,7 +135,7 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert 'data-product-filter="partial"' in app_script
     assert "Dự đoán gốc so với kết quả thật" in index
     assert "prediction-ledger-integrity" in index
-    assert "Chuỗi hash hợp lệ" in app_script
+    assert "Ledger hợp lệ" in app_script
     assert "backtest-evidence" in app_script
     assert "backtest-pairwise" in app_script
     assert ".backtest-pairwise-grid" in styles
