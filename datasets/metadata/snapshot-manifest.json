@@ -529,9 +529,9 @@
       "sha256": "dc42b45565176cca5565c1576f3dbb2e40c1c27f739617de6b523f9d5050050b"
     },
     "draws/lotto535/all.csv": {
-      "bytes": 317646,
+      "bytes": 317724,
       "data_rows": 794,
-      "sha256": "d214c530ad4792000530e45365905e5927cb64b70ab577b7f68263f26efa9c45"
+      "sha256": "081cfefd8fcff8d9e369dc7873b631e62f3f7ff34eee8883f5e96ec15d07fc56"
     },
     "draws/max3d/all.csv": {
       "bytes": 929756,
@@ -589,17 +589,17 @@
     "prizes/lotto535/all.csv": {
       "bytes": 2094541,
       "data_rows": 6258,
-      "sha256": "a64bef0f01fd8670171771f599d041fcb0ed99c4ba421cc6868fa5fb1e8ca2c7"
+      "sha256": "3edd62e0c18e667b37e5d4062f9758178dd99e4cbf6a986353bf33e9f996c228"
     },
     "prizes/max3d/all.csv": {
       "bytes": 5857952,
       "data_rows": 12232,
-      "sha256": "294f0b90afc4180a2ae3312c766fe0edb1fb905abe4a864989119edbfa96674d"
+      "sha256": "a09659da4e8462f0dbd1049b00434c8eecbb20b0d15f575a28f53cdee928b89b"
     },
     "prizes/max3dpro/all.csv": {
       "bytes": 3063902,
       "data_rows": 6072,
-      "sha256": "a690d78d0ab409ef411d23b8281a2938f74ce09dd5d288f63ab5553575497afa"
+      "sha256": "af0064558b124aa88a28fcb5f82697a33094ac0f2ab0762ba2ba396daec6e9df"
     },
     "prizes/max4d/all.csv": {
       "bytes": 1764794,
@@ -609,12 +609,12 @@
     "prizes/mega645/all.csv": {
       "bytes": 2266968,
       "data_rows": 6168,
-      "sha256": "baa094fca172281f729b82d432c0777fc60183f0c23ab33ac0c3b38a26e0f6d6"
+      "sha256": "de7008e69e496b7d9f33da40e37e960964ecbe977f9b7b83fa80dc9013468af5"
     },
     "prizes/power655/all.csv": {
       "bytes": 2568977,
       "data_rows": 6890,
-      "sha256": "a77335216507543c1216578ad5997ab34999c1897f0c5dca9c69636fac2c4dd6"
+      "sha256": "6c01e6939798e376e8a584abcf7de0912833572f5ceb30a8b7f0946716f53ea2"
     }
   },
   "methodology_versions": {
@@ -623,7 +623,7 @@
     "repository_snapshot": "1.0.0"
   },
   "parser_version": "0.2.0",
-  "repository_commit": "8e1aeca7a6e20e421b5ee22244ba5ba08975773a",
+  "repository_commit": "ebc83d1eb85a59d751f941c71c81f1d5820182c3",
   "schema_version": 1,
   "snapshot_at": "2026-07-30T16:22:20+00:00"
 }
