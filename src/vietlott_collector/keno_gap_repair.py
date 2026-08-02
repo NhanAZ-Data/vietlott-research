@@ -53,7 +53,7 @@ def main(argv: list[str] | None = None) -> None:
         retry_total=args.retries,
         user_agent=(
             "vietlott-history-collector/0.1 "
-            f"(Keno gap research; contact: {args.contact_email})"
+            f"(Keno gap collection; contact: {args.contact_email})"
         ),
     )
     clients = ArchiveClients(settings)

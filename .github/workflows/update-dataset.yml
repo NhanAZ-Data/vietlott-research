@@ -120,7 +120,7 @@ jobs:
           --validation-report "$RUNNER_TEMP/vietlott-reports/validation-report.json"
           --output "$GITHUB_STEP_SUMMARY"
 
-      - name: Lưu báo cáo chẩn đoán
+      - name: Lưu tóm tắt thu thập
         if: always()
         continue-on-error: true
         uses: actions/upload-artifact@v7

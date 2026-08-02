@@ -114,7 +114,7 @@ def audit_repository(root: Path = Path("datasets")) -> dict[str, object]:
         "grain": "one canonical row per (product, draw_id)",
         "definitions": {
             "draw_confirmation": (
-                "Whether an issued draw is accepted for statistical analysis. "
+                "Whether an issued draw is accepted in the published snapshot. "
                 "It is separate from schema validation and source provenance."
             ),
             "structural_validity": (

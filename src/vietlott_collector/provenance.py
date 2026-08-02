@@ -7,7 +7,7 @@ from typing import Any
 
 
 class DrawConfirmation(StrEnum):
-    """Whether an issued draw is accepted for statistical analysis."""
+    """Whether an issued draw is accepted in the published snapshot."""
 
     CONFIRMED = "confirmed"
     NOT_CONFIRMED = "not_confirmed"

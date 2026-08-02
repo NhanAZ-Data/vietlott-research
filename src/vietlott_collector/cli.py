@@ -17,7 +17,7 @@ from .storage import DatasetStore
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="vietlott-collector",
-        description="Collect public Vietlott draw history for data research.",
+        description="Collect and validate public Vietlott draw history.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 

@@ -2,7 +2,7 @@
   "definitions": {
     "candidate_gap": "A numeric identifier absent between the observed minimum and maximum. It is not automatically a missing draw.",
     "cross_checked": "Stored metadata shows an official match or multi-source consensus.",
-    "draw_confirmation": "Whether an issued draw is accepted for statistical analysis. It is separate from schema validation and source provenance.",
+    "draw_confirmation": "Whether an issued draw is accepted in the published snapshot. It is separate from schema validation and source provenance.",
     "official_source": "The canonical row is explicitly labelled official_vietlott or carries stored official verification evidence. A Vietlott-looking URL alone is not enough to promote an unlabelled legacy row.",
     "structural_validity": "Deterministic validation of identifier width, result shape, number range and uniqueness rules."
   },

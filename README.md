@@ -1,69 +1,44 @@
-# Vietlott Research
+# Vietlott Data Collector
 
-Repo hợp nhất này chứa toàn bộ quy trình thu thập và kiểm tra dữ liệu, snapshot
-canonical, phân tích, backtest, sổ dự đoán và website tĩnh. Workflow dùng trực tiếp
-`datasets` trong cùng repo để sinh lại `site/data` và triển khai GitHub Pages.
+`vietlott-data-collector` là kho thu thập, chuẩn hóa và phát hành dữ liệu kết quả Vietlott để người khác dùng trong công cụ riêng của họ.
 
-Kho dữ liệu và chương trình Python phục vụ nghiên cứu cá nhân về khoa học dữ liệu,
-xác suất và thống kê trên kết quả Vietlott.
+Đây là tên package/project mới. URL repository Git hiện vẫn là `NhanAZ-Data/vietlott-research`; có thể đổi tên repository từ xa sau khi kiểm tra các consumer đang dùng URL cũ.
 
-Dự án ưu tiên nguồn công khai chính thức, lưu cả lịch sử đã thu thập và tự kiểm tra
-kỳ mới bằng GitHub Actions. Mục tiêu là tạo một tập dữ liệu có nguồn gốc rõ ràng,
-có thể tái lập và đủ thuận tiện cho phân tích bằng Python, R hoặc công cụ bảng tính.
+Phạm vi duy nhất của project:
 
-Khi máy chạy GitHub bị Vietlott chặn truy cập, workflow dùng trang kết quả công
-khai của Xổ Số Minh Ngọc làm nguồn dự phòng. Các dòng này được gắn nhãn chờ
-đối chiếu và sẽ được thay bằng nguồn chính thức khi Vietlott truy cập được.
+- đọc dữ liệu từ nguồn Vietlott và nguồn đối chiếu đã khai báo;
+- chuẩn hóa kỳ quay, giải thưởng, luật giải và provenance;
+- lưu kho làm việc SQLite/CSV;
+- xuất snapshot CSV phân vùng, kiểm tra tính toàn vẹn và cập nhật tự động.
 
-## Phạm vi dữ liệu
+Project không chứa dự đoán, mô hình, backtest, phân tích thống kê, dashboard hay website. Các thư mục và workflow thuộc các phần đó đã được loại bỏ để toàn bộ công suất còn lại dành cho thu thập dữ liệu.
 
-- Mega 6/45
-- Power 6/55
-- Lotto 5/35
-- Max 3D và Max 3D+
-- Max 3D Pro
-- Max 4D lịch sử
-- Keno
-- Bingo18
+## Dữ liệu phát hành
 
-Bản snapshot kiểm toán tiếp tục tăng qua workflow và công bố số lượng hiện tại
-trong `datasets/metadata/dataset-summary.json`. Keno có dữ liệu từ mã `0000001`
-và 75 mã kỳ đã được nhiều nguồn đối
-chiếu là không phát hành. Các kỳ bị thông báo không xác nhận được giữ lại với
-`draw_status=not_confirmed` để bảo toàn dấu vết, nhưng phải loại khỏi mẫu phân
-tích mặc định.
+Snapshot trong `datasets/` bao gồm:
 
-## Website thống kê
+- Mega 6/45 (`mega645`)
+- Power 6/55 (`power655`)
+- Lotto 5/35 (`lotto535`)
+- Max 3D (`max3d`)
+- Max 3D Pro (`max3dpro`)
+- Max 4D (`max4d`)
+- Keno (`keno`)
+- Bingo18 (`bingo18`)
 
-Website công khai tại
-[nhanaz-data.github.io/vietlott-research](https://nhanaz-data.github.io/vietlott-research/).
+Các tệp quan trọng:
 
-Website có báo cáo riêng cho từng họ sản phẩm, gồm
+- `datasets/draws/<product>/...csv`: một dòng cho mỗi `(product, draw_id)`;
+- `datasets/prizes/<product>/all.csv`: các dòng giải thưởng đã thu thập;
+- `datasets/prize_rules.csv`: luật giải ổn định;
+- `datasets/exclusions.csv`: các kỳ có thông báo trạng thái đặc biệt;
+- `datasets/metadata/dataset-summary.json`: phạm vi và số dòng;
+- `datasets/metadata/quality-report.json`: kiểm tra cấu trúc, nguồn và độ phủ;
+- `datasets/metadata/snapshot-manifest.json`: hash và kích thước từng tệp.
 
-- tần suất và khoảng tin cậy
-- độ vắng theo số kỳ quay
-- thống kê theo tháng đã chuẩn hóa theo số kỳ
-- vị trí công bố và cấu trúc tổ hợp
-- kiểm định đồng đều, entropy và kích thước hiệu ứng
-- backtest cuốn chiếu so với baseline đồng đều
-- sổ dự đoán có mã, phiên bản và kỳ dữ liệu cuối
-- đối chiếu tự động khi kết quả thật xuất hiện
+`draw_status`, `validation_status` và các trường provenance phải được giữ nguyên khi xuất dữ liệu. Collector không tự suy ra kỳ bị thiếu từ mã số hoặc lịch dự kiến.
 
-Ở snapshot hiện tại, các backtest được công bố chưa cho thấy chiến lược nào vượt
-cách chọn ngẫu nhiên một cách đáng tin cậy. Đây là kết luận hiện tại của dự án,
-không phải cách né tránh kết luận. Nếu dự đoán đã lưu trước trong tương lai tạo ra
-bằng chứng ngược lại, kết luận trên website phải thay đổi theo.
-
-Website chỉ đọc các tệp JSON gọn được tạo từ toàn bộ dataset. Trình duyệt không
-phải tải hàng trăm MB CSV. Tạo lại báo cáo bằng lệnh
-
-```powershell
-vietlott-research-report --datasets-dir datasets --site-dir site
-```
-
-## Dùng dataset
-
-Clone repo và cài chương trình
+## Cài đặt và sử dụng
 
 ```powershell
 git clone https://github.com/NhanAZ-Data/vietlott-research.git
@@ -73,149 +48,78 @@ python -m venv .venv
 python -m pip install -e ".[dev]"
 ```
 
-Ghép các phân vùng trong `datasets` thành CSV
+Liệt kê sản phẩm được hỗ trợ:
+
+```powershell
+vietlott-data-collector products
+```
+
+Thu thập các kỳ mới vào kho SQLite/CSV:
+
+```powershell
+vietlott-data-collector collect `
+  --products keno bingo18 `
+  --output-dir data `
+  --format parquet `
+  --contact-email you@example.com
+```
+
+Chạy backfill lịch sử hoặc bỏ qua bảng giải thưởng khi cần tốc độ:
+
+```powershell
+vietlott-collector collect --products all --output-dir data --backfill
+vietlott-collector collect --products all --output-dir data --without-prizes
+```
+
+Kiểm tra kho làm việc:
+
+```powershell
+vietlott-collector validate --output-dir data --format parquet
+```
+
+Để dùng snapshot đã phát hành bằng công cụ khác, ghép các phân vùng thành CSV:
 
 ```powershell
 vietlott-repository-data hydrate --source-dir datasets --destination-dir data
 ```
 
-Các tệp chính
-
-- `data/draws.csv` chứa một dòng cho mỗi kỳ quay
-- `data/prizes.csv` chứa thông tin giải thưởng theo kỳ
-- `data/prize_rules.csv` chứa luật trả thưởng có cấu trúc ổn định
-- `datasets/exclusions.csv` chứa các kỳ cần loại khỏi phân tích
-- `datasets/metadata/dataset-summary.json` chứa thống kê bao phủ
-- `datasets/metadata/quality-report.json` tách chất lượng cấu trúc, nguồn và độ phủ
-- `datasets/metadata/snapshot-manifest.json` chứa hash và phiên bản để tái lập
-
-Ví dụ đọc dữ liệu hợp lệ bằng pandas
-
-```python
-import pandas as pd
-
-draws = pd.read_csv(
-    "data/draws.csv",
-    dtype={"product": "string", "draw_id": "string"},
-)
-sample = draws.loc[draws["draw_status"] == "confirmed"].copy()
-```
-
-Không nên bỏ điều kiện `draw_status` khi xây dựng mô hình hoặc kiểm định.
-Điều kiện này chỉ chọn kỳ được xác nhận. Nó không thay thế kiểm tra
-`validation_status` hoặc provenance nguồn.
-
-Kiểm toán toàn bộ snapshot
+Sau khi cập nhật kho làm việc, đóng gói lại và kiểm tra snapshot:
 
 ```powershell
-vietlott-repository-data audit --source-dir datasets
-vietlott-repository-data validate --source-dir datasets
-```
-
-## Cập nhật
-
-Keno và Bingo18 được kiểm tra mỗi 10 phút trong khung phát hành. Các sản phẩm
-quay theo mốc giờ được kiểm tra nhiều lần sau các mốc dự kiến. Chương trình đọc
-trạng thái thực tế từ nguồn chính thức thay vì tự tạo kỳ theo lịch.
-
-Cách này xử lý được các trường hợp
-
-- kết quả công bố chậm
-- kỳ quay đổi lịch
-- kỳ không diễn ra
-- sản phẩm tạm dừng hoặc ngừng hoạt động
-- workflow bị GitHub trì hoãn
-- mạng lỗi tạm thời
-- nguồn sửa kết quả gần nhất
-- nguồn chính thức tạm chặn IP của GitHub
-
-Nếu không có dữ liệu mới thì workflow không tạo commit. Khi một lần chạy bị lỡ,
-lần sau tiếp tục đọc nhiều trang cho đến khi gặp vùng dữ liệu đã có.
-
-Chạy cập nhật thủ công
-
-```powershell
-vietlott-auto-update --products keno bingo18 --output-dir data
 vietlott-repository-data publish --source-dir data --destination-dir datasets
-vietlott-research-report --datasets-dir datasets --site-dir site
+vietlott-repository-data validate --source-dir datasets
+vietlott-repository-data audit --source-dir datasets
 ```
 
-## Tài liệu
+## Tài liệu cho người dùng dữ liệu
 
 - [Nguồn và quy trình thu thập](docs/THU_THAP_DU_LIEU.md)
-- [Chất lượng dữ liệu và provenance](docs/CHAT_LUONG_DU_LIEU.md)
-- [Cơ chế tự động cập nhật](docs/TU_DONG_CAP_NHAT.md)
-- [Định hướng nghiên cứu](docs/NGHIEN_CUU.md)
-- [Các trò chơi và cơ chế quay](docs/tro-choi/README.md)
-- [Kiến trúc chương trình](docs/ARCHITECTURE.md)
-- [Kế hoạch nâng cấp nghiên cứu](docs/TODO_NGHIEN_CUU.md)
-- [Báo cáo lần dự đoán đúng Bingo18 kỳ 0171884](docs/DU_DOAN_BINGO18_0171884.md)
-- [Từ điển dữ liệu](docs/DATA_DICTIONARY.md)
-- [Nhật ký phương pháp](docs/METHODOLOGY_CHANGELOG.md)
-- [Phạm vi kỳ mục tiêu chung của backtest](docs/BACKTEST_TARGET_SCOPE.md)
-- [Công thức điểm của backtest](docs/BACKTEST_SCORE_FORMULAS.md)
-- [Tách phase chọn công thức và đánh giá cuối](docs/BACKTEST_PHASE_SPLIT.md)
-- [Registry hiệu chỉnh nhiều phép thử của backtest](docs/BACKTEST_MULTIPLE_TESTING.md)
-- [Nhật ký trial thất bại và cấu hình bị loại](docs/BACKTEST_TRIAL_DISPOSITION.md)
-- [Độ nhạy cửa sổ gần của backtest](docs/BACKTEST_WINDOW_SENSITIVITY.md)
-- [Block bootstrap cho backtest walk-forward](docs/BACKTEST_BLOCK_BOOTSTRAP.md)
-- [Ngưỡng độ lớn hiệu ứng của fairness audit](docs/AUDIT_EFFECT_THRESHOLDS.md)
-- [Ma trận phụ thuộc giữa các phép kiểm](docs/AUDIT_TEST_DEPENDENCIES.md)
-- [Phân rã kiểm định theo hạng giải](docs/AUDIT_TIER_BREAKDOWN.md)
-- [Phân rã kiểm định theo giai đoạn thời gian](docs/AUDIT_PERIOD_BREAKDOWN.md)
-- [Phân rã kiểm định theo nguồn dữ liệu](docs/AUDIT_SOURCE_BREAKDOWN.md)
-- [Độ nhạy khi loại từng nguồn dữ liệu](docs/AUDIT_SOURCE_SENSITIVITY.md)
-- [Độ nhạy theo xác nhận và độ tin cậy nguồn](docs/AUDIT_RELIABILITY_SENSITIVITY.md)
-- [Phân tích công suất của fairness audit](docs/AUDIT_POWER_ANALYSIS.md)
-- [Permutation check giữ nguyên cấu trúc từng kỳ](docs/AUDIT_PERMUTATION_CHECKS.md)
-- [Block bootstrap cho chỉ số phụ thuộc chuỗi](docs/AUDIT_BLOCK_BOOTSTRAP.md)
-- [Change-point scan nhiều điểm ứng viên](docs/AUDIT_CHANGE_POINT_SCAN.md)
-- [Đồng xuất hiện cặp số Keno](docs/AUDIT_KENO_PAIR_COOCCURRENCE.md)
-- [Mẫu báo cáo kết quả âm](docs/templates/BAO_CAO_KET_QUA_AM.md)
-- [Giao thức tái kiểm tra tín hiệu Max 3D](docs/protocols/MAX3D_POSITION_CONFIRMATION.md)
+- [Hợp đồng dữ liệu](docs/DATA_DICTIONARY.md)
+- [Chất lượng và provenance](docs/CHAT_LUONG_DU_LIEU.md)
+- [Tự động cập nhật](docs/TU_DONG_CAP_NHAT.md)
+- [Kiến trúc collector](docs/ARCHITECTURE.md)
 
-## Tinh thần nghiên cứu
+`SOURCE_SURVEY.md` chỉ là đường dẫn tương thích tới tài liệu nguồn. Không có tài liệu hoặc artifact nào mô tả dự đoán hay phân tích trong project này.
 
-Repo bắt đầu từ một câu hỏi cá nhân. Một hệ cơ học có thể chịu ảnh hưởng rất nhỏ
-từ khối lượng bi, độ mòn, luồng khí, nhiệt độ hoặc sai số thiết bị hay không.
-Nếu có, ảnh hưởng đó có đủ lớn và đủ ổn định để quan sát trong dữ liệu hay chỉ
-là nhiễu không thể phân biệt với ngẫu nhiên.
+## Tự động cập nhật
 
-Đây là giả thuyết cần kiểm định, không phải kết luận. Dự án cũng xem xét tần suất
-số, độ phụ thuộc theo thời gian, entropy, độ đồng đều và thay đổi chế độ. Một bộ
-số trông "đẹp" hoặc có quy luật không mặc nhiên ít có khả năng hơn một bộ cụ thể
-khác trong mô hình đồng đều. Cảm giác hiếm thường đến từ cách con người gom nhiều
-mẫu khác nhau thành một nhóm dễ nhận biết.
+GitHub Actions chạy hai lịch thu thập: nhóm sản phẩm có tần suất cao và nhóm sản phẩm theo mốc giờ. Mỗi lượt:
 
-Website tĩnh trực quan hóa phân bố, sai lệch, độ bất định và kết quả kiểm định
-ngoài mẫu. Mọi dự báo chỉ là thí nghiệm và luôn được so với baseline đồng đều.
-Quan điểm của dự án được trình bày rõ, nhưng dữ liệu và phương pháp có quyền bác
-bỏ quan điểm đó.
+1. khôi phục kho làm việc từ snapshot;
+2. đọc nguồn chính thức, dùng nguồn đối chiếu khi nguồn chính thức không truy cập được;
+3. đối chiếu một vùng kỳ gần nhất;
+4. áp dụng ngoại lệ chính thức;
+5. validate, audit và kiểm tra hồi quy chất lượng;
+6. chỉ commit `datasets` khi dữ liệu hợp lệ thực sự thay đổi.
 
-## Nguồn, pháp lý và trách nhiệm
+Không có workflow triển khai website hoặc sinh báo cáo phân tích.
 
-Kết quả được lấy từ trang công khai của
-[Vietlott](https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/)
-và một số nguồn đối chiếu được ghi trong tài liệu kỹ thuật. Repo không liên kết,
-đại diện hoặc được bảo trợ bởi Vietlott, MoMo hay đơn vị phát hành nào.
+## Nguồn và trách nhiệm
 
-Dự án lưu dữ kiện kết quả và thông tin nguồn cho mục đích cá nhân, học tập và
-nghiên cứu. Repo không sao chép logo của nguồn dữ liệu, giao diện, bài viết hoặc
-video của nguồn.
-Người sử dụng cần tự kiểm tra điều khoản, quyền sở hữu trí tuệ và quy định pháp
-luật áp dụng tại thời điểm sử dụng. Nội dung trong repo không phải tư vấn pháp lý.
+Collector ưu tiên các trang kết quả công khai của [Vietlott](https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/) và lưu URL, thời điểm, trạng thái xác nhận cùng lịch sử nguồn. Khi cần, nguồn đối chiếu được ghi rõ trong `attributes_json`; dữ liệu không được nâng trạng thái chỉ vì URL có vẻ chính thức.
 
-Website sử dụng biểu tượng
-[Crystal Ball](https://www.flaticon.com/free-icon-font/crystal-ball_8034121)
-từ UIcons by Flaticon và đổi màu bằng CSS. Biểu tượng tuân theo điều kiện ghi
-nguồn của Flaticon.
-
-Xổ số là hoạt động có rủi ro tài chính và dành cho người đủ điều kiện theo pháp
-luật. Dữ liệu lịch sử không bảo đảm khả năng dự đoán hoặc trúng thưởng. Không nên
-dùng repo làm cơ sở để vay tiền, tăng mức cược hoặc xem kết quả mô hình là lời
-khuyên tài chính.
+Repo không liên kết hoặc đại diện cho Vietlott. Người dùng dữ liệu tự kiểm tra điều khoản nguồn, quyền sở hữu trí tuệ và quy định áp dụng. Dữ liệu lịch sử là dữ liệu tham khảo, không phải tư vấn tài chính.
 
 ## Giấy phép
 
-Mã nguồn được phát hành theo giấy phép MIT. Dữ liệu gốc vẫn chịu các quyền và
-điều kiện của nguồn tương ứng.
+Mã nguồn phát hành theo MIT. Dữ liệu gốc vẫn chịu quyền và điều kiện của nguồn tương ứng.

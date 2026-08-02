@@ -3,9 +3,9 @@ requires = ["setuptools>=70", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "vietlott-research"
+name = "vietlott-data-collector"
 version = "1.0.0"
-description = "Collect, validate, analyze, and publish public Vietlott draw data."
+description = "Collect, validate, and publish public Vietlott draw data."
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
@@ -28,6 +28,7 @@ dev = [
 
 [project.scripts]
 vietlott-collector = "vietlott_collector.cli:main"
+vietlott-data-collector = "vietlott_collector.cli:main"
 vietlott-full-backfill = "vietlott_collector.full_backfill:main"
 vietlott-official-reconcile = "vietlott_collector.official_reconcile:main"
 vietlott-fast-gap-reconcile = "vietlott_collector.fast_gap_reconcile:main"
@@ -36,7 +37,7 @@ vietlott-keno-gap-repair = "vietlott_collector.keno_gap_repair:main"
 vietlott-keno-full-history = "vietlott_collector.keno_full_history:main"
 vietlott-auto-update = "vietlott_collector.incremental_update:main"
 vietlott-repository-data = "vietlott_collector.repository_data:main"
-vietlott-research-report = "vietlott_analytics.cli:main"
+vietlott-dataset = "vietlott_collector.repository_data:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -48,7 +49,7 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 110
 target-version = "py311"
-extend-exclude = ["_sources", "data", "datasets", "site/data", "tmp"]
+extend-exclude = ["_sources", "data", "datasets", "tmp"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]

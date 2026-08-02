@@ -16,8 +16,8 @@ def test_dataset_workflow_preserves_before_and_after_diagnostics() -> None:
     assert "check_quality_regressions.py" in workflow
     assert "quality-regressions.json" in workflow
     assert "actions/upload-artifact@v7" in workflow
-    assert "site/data" not in workflow
-    assert "vietlott-research-report" not in workflow
+    assert "site/" not in workflow
+    assert "prediction" not in workflow.lower()
 
 
 def test_collector_workflows_do_not_request_pages_permissions() -> None:
@@ -32,3 +32,10 @@ def test_collector_workflows_do_not_request_pages_permissions() -> None:
         workflow = path.read_text(encoding="utf-8")
         assert "pages: write" not in workflow
         assert "id-token: write" not in workflow
+
+
+def test_web_and_prediction_workflows_are_removed() -> None:
+    workflow_dir = ROOT / ".github" / "workflows"
+    names = {path.name for path in workflow_dir.glob("*.yml")}
+    assert "build-pages.yml" not in names
+    assert names == {"ci.yml", "update-dataset.yml", "update-fast.yml", "update-scheduled.yml"}

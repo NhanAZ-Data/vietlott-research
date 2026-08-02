@@ -578,8 +578,8 @@
       "sha256": "233a8dd42aa5ff811ec0f3cedc50b66fd0e8ebe0e0592a2f3d891308ef756a87"
     },
     "metadata/quality-report.json": {
-      "bytes": 83670,
-      "sha256": "7faad51f7cafad1d591d19b7b7a919f0d7f23c31fb920612d5c7a36d982e3737"
+      "bytes": 83671,
+      "sha256": "d1317bf916585ea0eb2be60d95333b6a19cfb62e4965c86939a1b6cf4f8bb5ce"
     },
     "prize_rules.csv": {
       "bytes": 89189,
@@ -633,7 +633,7 @@
     "repository_snapshot": "1.0.0"
   },
   "parser_version": "0.2.0",
-  "repository_commit": "defcd70400b57f6c93223c845fadb55916ebbb4e",
+  "repository_commit": "69b1a85764c5608fcf7c53a3c4e7ad5093f16fae",
   "schema_version": 1,
   "snapshot_at": "2026-08-02T00:05:56+00:00"
 }
