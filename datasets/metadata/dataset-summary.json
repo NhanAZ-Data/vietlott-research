@@ -1,27 +1,27 @@
 {
-  "confirmed_rows": 392578,
-  "dataset_updated_at": "2026-08-19T09:19:46+00:00",
-  "draw_rows": 392639,
+  "confirmed_rows": 392589,
+  "dataset_updated_at": "2026-08-19T09:55:12+00:00",
+  "draw_rows": 392650,
   "not_confirmed_rows": 61,
   "prize_rows": 47054,
   "products": {
     "bingo18": {
-      "confirmed_rows": 95508,
+      "confirmed_rows": 95515,
       "first_date": "2024-12-03",
       "last_date": "2026-08-19",
-      "max_id": "0182325",
+      "max_id": "0182332",
       "min_id": "0083123",
       "not_confirmed_rows": 30,
-      "rows": 95538
+      "rows": 95545
     },
     "keno": {
-      "confirmed_rows": 290692,
+      "confirmed_rows": 290696,
       "first_date": "2019-08-23",
       "last_date": "2026-08-19",
-      "max_id": "0292600",
+      "max_id": "0292604",
       "min_id": "0000001",
       "not_confirmed_rows": 31,
-      "rows": 290723
+      "rows": 290727
     },
     "lotto535": {
       "confirmed_rows": 833,
