@@ -1,6 +1,6 @@
 {
   "dataset_rows": {
-    "draws": 394139,
+    "draws": 394140,
     "prizes": 47203
   },
   "date_range": {
@@ -109,9 +109,9 @@
       "sha256": "4ef5c5fbb915f31ce2ee1691a195ca6e94d1a0be94fc594324869f74880e4c8a"
     },
     "draws/bingo18/2026-08.csv": {
-      "bytes": 1409969,
-      "data_rows": 3361,
-      "sha256": "43a6b7055dca033560ddf933e4758f6f235a071c9ab4d3be81906ee1977f528b"
+      "bytes": 1410360,
+      "data_rows": 3362,
+      "sha256": "2da5a6656428250d64f6bab23103fb7ac9a6e88f60c0105e9c8d8a13376ec435"
     },
     "draws/keno/2019-08.csv": {
       "bytes": 359449,
@@ -575,11 +575,11 @@
     },
     "metadata/dataset-summary.json": {
       "bytes": 2145,
-      "sha256": "2277143e9f60405fee4bf0af05a39c32be4eb0a2df0492077c12bf3dd39c1f8f"
+      "sha256": "378ce99e72dbea0c30ba4be118664bae1d2ea87404d9a8df2aec8305aeae8a1a"
     },
     "metadata/quality-report.json": {
       "bytes": 96099,
-      "sha256": "39f95ee57346334ed125751e189d9c1138bf2b49c9e8ab8ea5ee7be8ffa79d89"
+      "sha256": "ffdb8696ec0c76f5d7a28e640eff4214a9c9974f9d1eac7d33c7d83dc416a4d1"
     },
     "prize_rules.csv": {
       "bytes": 89189,
@@ -633,7 +633,7 @@
     "repository_snapshot": "1.0.0"
   },
   "parser_version": "0.2.0",
-  "repository_commit": "05db33359764ceda7d503834a434c0907bd37958",
+  "repository_commit": "97bf48bf661f60213211524ee511ce037ded0879",
   "schema_version": 1,
-  "snapshot_at": "2026-08-24T14:56:47+00:00"
+  "snapshot_at": "2026-08-24T15:35:09+00:00"
 }
