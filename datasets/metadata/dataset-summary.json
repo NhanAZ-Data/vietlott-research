@@ -1,9 +1,9 @@
 {
-  "confirmed_rows": 394077,
-  "dataset_updated_at": "2026-08-24T14:54:44+00:00",
-  "draw_rows": 394138,
+  "confirmed_rows": 394078,
+  "dataset_updated_at": "2026-08-24T14:56:47+00:00",
+  "draw_rows": 394139,
   "not_confirmed_rows": 61,
-  "prize_rows": 47196,
+  "prize_rows": 47203,
   "products": {
     "bingo18": {
       "confirmed_rows": 96350,
@@ -24,13 +24,13 @@
       "rows": 291360
     },
     "lotto535": {
-      "confirmed_rows": 843,
+      "confirmed_rows": 844,
       "first_date": "2025-06-29",
       "last_date": "2026-08-24",
-      "max_id": "00843",
+      "max_id": "00844",
       "min_id": "00001",
       "not_confirmed_rows": 0,
-      "rows": 843
+      "rows": 844
     },
     "max3d": {
       "confirmed_rows": 1123,
