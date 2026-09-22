@@ -1,7 +1,7 @@
 {
   "dataset_rows": {
-    "draws": 398000,
-    "prizes": 47931
+    "draws": 398003,
+    "prizes": 47951
   },
   "date_range": {
     "first": "2016-07-20",
@@ -549,9 +549,9 @@
       "sha256": "c9211c623107b1638bd47ded9f26c50ae7480ca859e5ae0d480bf2788891ba95"
     },
     "draws/lotto535/all.csv": {
-      "bytes": 374424,
-      "data_rows": 900,
-      "sha256": "b5a14262e1e4dc20448e63d51ca3d5f3bac90c2f18afb64b0940bf726926f7ca"
+      "bytes": 374842,
+      "data_rows": 901,
+      "sha256": "9a8c33cdd61e83160597a1925dc2b671e8633d31e39101a38ef5db7af0c62de9"
     },
     "draws/max3d/all.csv": {
       "bytes": 952252,
@@ -559,9 +559,9 @@
       "sha256": "d072bb0f3d2e89cb69417b19ed1d19b5a17184fc8d6df63b74cd8e25f8301373"
     },
     "draws/max3dpro/all.csv": {
-      "bytes": 667077,
-      "data_rows": 781,
-      "sha256": "9067013a11dac40689cff7b3d2552711366f356a3e1354bd0135edd99656df06"
+      "bytes": 667642,
+      "data_rows": 782,
+      "sha256": "baf3219747ad2902e2503f9eae085a2f68a95ea6c67b5ada058caf9522d7bf50"
     },
     "draws/max4d/all.csv": {
       "bytes": 521574,
@@ -574,9 +574,9 @@
       "sha256": "a6e686fdce054fdc8d705470fdd8d65934ea79c1f68d0776e94d05a57d4f970c"
     },
     "draws/power655/all.csv": {
-      "bytes": 967412,
-      "data_rows": 1400,
-      "sha256": "7d84f708812982bb142d968632e6ebe21f93ba97bdfdf812a19388be94633c4e"
+      "bytes": 967808,
+      "data_rows": 1401,
+      "sha256": "7dcf10b3cc8fd111aa0290b5c0ca110a8595d9bc371320215cd36770cb9e3a1f"
     },
     "exclusions.csv": {
       "bytes": 16789,
@@ -585,11 +585,11 @@
     },
     "metadata/dataset-summary.json": {
       "bytes": 2145,
-      "sha256": "ad13daecb212a5b549cddfd70427a98e793b07623d84c2313e6e319e7adec857"
+      "sha256": "8cddfce0b9051f67d9610dfba442e4d01ff50454f97f8e877ca0f760151a02f5"
     },
     "metadata/quality-report.json": {
       "bytes": 126835,
-      "sha256": "fd3aa5bbca16edb708d155cfdf6c97a24d2b2d1707ef29845f2610cabc0336c9"
+      "sha256": "933fc952cef709bb03c21057b3343d241fa81412c9a7afff585ebbeff143fdd4"
     },
     "prize_rules.csv": {
       "bytes": 89189,
@@ -607,19 +607,19 @@
       "sha256": "6a18db614246e3d8e35c699a74273221f4a23163ee53657f0dab138c33bfd5b6"
     },
     "prizes/lotto535/all.csv": {
-      "bytes": 2310176,
-      "data_rows": 7020,
-      "sha256": "4396dba8140c6d84737647038fd12118eaa6186749d657471f480be25b89d6c7"
+      "bytes": 2312044,
+      "data_rows": 7027,
+      "sha256": "252b3ed3902807ac7ca4b8bfcf582801934570ac3ac8fb3ec71bdb25461eb35e"
     },
     "prizes/max3d/all.csv": {
       "bytes": 5985747,
       "data_rows": 12485,
-      "sha256": "33ec45e78a0bb240bab0f91467011a56430b55a82315e864dc527b66cd1c0d71"
+      "sha256": "b61c79e555bc512fb8d4a2a7e7bdf05cc2b55c04e687c9bcaefac2cffa61e70d"
     },
     "prizes/max3dpro/all.csv": {
-      "bytes": 3138008,
-      "data_rows": 6248,
-      "sha256": "d63624780b603897d43877ee09d7cc932b7c4ce3835971477ea15253cadb637e"
+      "bytes": 3140784,
+      "data_rows": 6256,
+      "sha256": "7dc6b0693a774fd8ee9c5beff3f8a3fa5ba2ddab6b800068208697c3925313b3"
     },
     "prizes/max4d/all.csv": {
       "bytes": 1764794,
@@ -629,12 +629,12 @@
     "prizes/mega645/all.csv": {
       "bytes": 2297719,
       "data_rows": 6260,
-      "sha256": "42afcef03d0da6d716193d491d740d466d8eddb28499f4f5a18721d590a619e9"
+      "sha256": "19665034bb267c3331c6f83922fd3b957f05a8e189184ddaa971086b7c96fddc"
     },
     "prizes/power655/all.csv": {
-      "bytes": 2606798,
-      "data_rows": 7000,
-      "sha256": "02ae5f702ebe1ab11e855e0d61016957b2181eb25d3ab6f4e293da9f6c1a7e24"
+      "bytes": 2608054,
+      "data_rows": 7005,
+      "sha256": "05e4aac5d3f08c938c788c778afbaca03934a644a9d518d7a50b220429e4cfee"
     }
   },
   "methodology_versions": {
@@ -643,7 +643,7 @@
     "repository_snapshot": "1.0.0"
   },
   "parser_version": "0.2.0",
-  "repository_commit": "79cce0244a42d60b305bd0ce0cc3f8ea927f33a5",
+  "repository_commit": "fbe0715f4867348aa8c1a843d5a631d1d3330adb",
   "schema_version": 1,
-  "snapshot_at": "2026-09-22T06:45:55+00:00"
+  "snapshot_at": "2026-09-22T11:28:54+00:00"
 }
