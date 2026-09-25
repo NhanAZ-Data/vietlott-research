@@ -1,7 +1,7 @@
 {
   "dataset_rows": {
-    "draws": 398372,
-    "prizes": 48014
+    "draws": 398375,
+    "prizes": 48036
   },
   "date_range": {
     "first": "2016-07-20",
@@ -549,14 +549,14 @@
       "sha256": "17bccd7e4e5d2f8a6575db89443df31a0829cf3d79a08ff912f29ed8ff14e429"
     },
     "draws/lotto535/all.csv": {
-      "bytes": 377398,
-      "data_rows": 906,
-      "sha256": "d45c295137e9b49ade56b9159010077b4a890fee7ad7b58e97329a18ee6cefc9"
+      "bytes": 377816,
+      "data_rows": 907,
+      "sha256": "3e45a9f39aba91ee8eafa89498924e85443eaa8c283d1061bb5574be1aa16e44"
     },
     "draws/max3d/all.csv": {
-      "bytes": 952880,
-      "data_rows": 1136,
-      "sha256": "ed8fae7203f6b2e0c220f34d9d46c297cf1f398562d3f54b320f5cb832d4b601"
+      "bytes": 953434,
+      "data_rows": 1137,
+      "sha256": "3344480794fa888d62fb982ea29629b2181b0733117306e6e0d99d6ec3a35a0b"
     },
     "draws/max3dpro/all.csv": {
       "bytes": 668363,
@@ -569,9 +569,9 @@
       "sha256": "91532729b155381d907c9e19412b4dc5478db75c5194f5fd474e625592bc3de2"
     },
     "draws/mega645/all.csv": {
-      "bytes": 1057698,
-      "data_rows": 1566,
-      "sha256": "49dd4c9e3db79d31a9f85f48075e36b2b1ebc9014947dfff545787c205866340"
+      "bytes": 1058068,
+      "data_rows": 1567,
+      "sha256": "650a6cb26e46100c1f7d2ad65a3f24f3dbdcba3fa0e86fd86ea31ef6cf89fc6c"
     },
     "draws/power655/all.csv": {
       "bytes": 968362,
@@ -585,11 +585,11 @@
     },
     "metadata/dataset-summary.json": {
       "bytes": 2145,
-      "sha256": "1f71cae552147ccd0e1a13519a4dfcd8abececfc8981db2f0d54e4c87cd1b102"
+      "sha256": "d0ea4d8fde2a62b5de2fc768863776c43c3487a986fc65e3a9edd0337603a29b"
     },
     "metadata/quality-report.json": {
       "bytes": 130714,
-      "sha256": "f009a41a104e9d92d7e0754ad9a2ea5b77b772db00f1b781e1c64970cbd93f2a"
+      "sha256": "e183d270931b61d4714bf3b28f692e0f4aa2aa076ced89bf722c6d7f294ab3d5"
     },
     "prize_rules.csv": {
       "bytes": 89189,
@@ -607,19 +607,19 @@
       "sha256": "6a18db614246e3d8e35c699a74273221f4a23163ee53657f0dab138c33bfd5b6"
     },
     "prizes/lotto535/all.csv": {
-      "bytes": 2321386,
-      "data_rows": 7062,
-      "sha256": "e5793c75713a7927c5f8054cd4d7237fab8c2d0931e5ca02d29fb75f61a98b6d"
+      "bytes": 2323254,
+      "data_rows": 7069,
+      "sha256": "0d24ad200547c421c47c75fb295a2974d2c7856a99963bc0387622ab88eec694"
     },
     "prizes/max3d/all.csv": {
-      "bytes": 5991578,
-      "data_rows": 12496,
-      "sha256": "8c5c7fcdfc7ff62a67fad05a933e9ea157bccb6d6305af5c8abc316a3d568a58"
+      "bytes": 5997409,
+      "data_rows": 12507,
+      "sha256": "65ec031cc90b24cd2f652f4521d361859320e4fd6695890de48713528f05ae7e"
     },
     "prizes/max3dpro/all.csv": {
       "bytes": 3143570,
       "data_rows": 6264,
-      "sha256": "562723c99fd3843c7b81e28968d11e453afdb68cf55526ba8cd134eeedcc3592"
+      "sha256": "90bbeb6b6029ac4724dfa4cbbbc50c15dd678d8a287a1707c8f88f88468e54be"
     },
     "prizes/max4d/all.csv": {
       "bytes": 1764794,
@@ -627,14 +627,14 @@
       "sha256": "1b4d0f81b7ffcf57a3789fde84f8bafab266966a2a3bba937020a8d4d8081241"
     },
     "prizes/mega645/all.csv": {
-      "bytes": 2298738,
-      "data_rows": 6264,
-      "sha256": "05d9b7573c361bbcc9cd92722d81ff6402c679ee4952ca02a78ffa982241d549"
+      "bytes": 2299759,
+      "data_rows": 6268,
+      "sha256": "3122f432a7529981d44a7451b87eae3d33c9735ee5708d5c2916dd79e9f069a1"
     },
     "prizes/power655/all.csv": {
       "bytes": 2609420,
       "data_rows": 7010,
-      "sha256": "60ebbeb03ed3923be263dab2ecfd79389576611d0224f5718e4032a0f67f4d71"
+      "sha256": "a2ca5e2426ac56680c44b1fa5ea185cce767186a489cb1dbe390d84abc266f53"
     }
   },
   "methodology_versions": {
@@ -643,7 +643,7 @@
     "repository_snapshot": "1.0.0"
   },
   "parser_version": "0.2.0",
-  "repository_commit": "0d6e433ae4b137ffcaf28ca3bca46fca42dc37d1",
+  "repository_commit": "40a5a64fea6a78d00d656e953bd563bb9cd5a92d",
   "schema_version": 1,
-  "snapshot_at": "2026-09-25T06:20:25+00:00"
+  "snapshot_at": "2026-09-25T11:44:23+00:00"
 }
