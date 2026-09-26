@@ -1,7 +1,7 @@
 {
   "dataset_rows": {
-    "draws": 398528,
-    "prizes": 48055
+    "draws": 398530,
+    "prizes": 48070
   },
   "date_range": {
     "first": "2016-07-20",
@@ -549,9 +549,9 @@
       "sha256": "3b869c70942ed368a304c8182bc686c4f4a23d27b324c1506ceee25ab4a5267c"
     },
     "draws/lotto535/all.csv": {
-      "bytes": 378809,
-      "data_rows": 909,
-      "sha256": "43562932b491e61209badac1635e4dcefd94b84522969f1afad3c0df4c8b4e93"
+      "bytes": 379306,
+      "data_rows": 910,
+      "sha256": "6e2adca6b20b2ed860e83306fa115b82c11b4a3a791babab30f2c3918d2711a8"
     },
     "draws/max3d/all.csv": {
       "bytes": 953508,
@@ -559,9 +559,9 @@
       "sha256": "bd1c3a41c576928e94f6fe82df1a2a999c0ca248d340de1623dd9c21938304e3"
     },
     "draws/max3dpro/all.csv": {
-      "bytes": 668363,
-      "data_rows": 783,
-      "sha256": "4a4fc9eaffd25c8cd099269877426d5aa839fc240e80839103a628919be93b81"
+      "bytes": 668928,
+      "data_rows": 784,
+      "sha256": "7f2233442cf8403c6b469b66864a1e212dc4492bd2b1617cd0573652cb5945a5"
     },
     "draws/max4d/all.csv": {
       "bytes": 521574,
@@ -574,9 +574,9 @@
       "sha256": "29ee9fc274adfc8754ef5ba88f51a50bca57b0a6396116c88636631713f228ff"
     },
     "draws/power655/all.csv": {
-      "bytes": 968761,
+      "bytes": 968839,
       "data_rows": 1403,
-      "sha256": "6b3af76ffaa365211dedbd88d9fcd5cec27246f14e969a6abe320e2543d91a97"
+      "sha256": "38a1c5bcd417a23a3544356659ea3af3966a1735a5d0c322e2bb5c4d19289f63"
     },
     "exclusions.csv": {
       "bytes": 16789,
@@ -585,11 +585,11 @@
     },
     "metadata/dataset-summary.json": {
       "bytes": 2145,
-      "sha256": "7b37132b22cec2cf4c65e7916b86035dfe6da01aa0ee90b740e1a87fde8bea5f"
+      "sha256": "567b86509e744c16c5ccf87f0bcc121daa5c572b674065de443cb3cfac3bd4fa"
     },
     "metadata/quality-report.json": {
       "bytes": 132332,
-      "sha256": "e65ee6c57625a7f28722c73b1fcb0a9fa648d7401b328a5f15c9c9a144706a82"
+      "sha256": "651127b19d04eeaa91920c13ed7d66b6ede213ca56b4035832c4a92ffaa1bd7f"
     },
     "prize_rules.csv": {
       "bytes": 89189,
@@ -607,19 +607,19 @@
       "sha256": "6a18db614246e3d8e35c699a74273221f4a23163ee53657f0dab138c33bfd5b6"
     },
     "prizes/lotto535/all.csv": {
-      "bytes": 2326990,
-      "data_rows": 7083,
-      "sha256": "c227b22d28ab2c5054bb2b05634314c54a0a029e4903f50a451755acdfe65678"
+      "bytes": 2328860,
+      "data_rows": 7090,
+      "sha256": "927d9d302b2c6daf499abd41e00638cdff550525421f2695f71897a2cd417746"
     },
     "prizes/max3d/all.csv": {
       "bytes": 5997409,
       "data_rows": 12507,
-      "sha256": "eb23be14603286002c914c7ef63736ae105799a9a405bc1b26b35cccd086b4c5"
+      "sha256": "2251b39ef140ef5ebe7c4825981c2f5227bee76daddd0010539fd3d82d56a53e"
     },
     "prizes/max3dpro/all.csv": {
-      "bytes": 3143570,
-      "data_rows": 6264,
-      "sha256": "5be628e8671ccb39660c17f9ae501429b5560f2320857f94be04298f1e734c62"
+      "bytes": 3146351,
+      "data_rows": 6272,
+      "sha256": "05a1262fd494a69c7b734f8e0af8499e0ccb1202f14ed6f47d7894e95e5d1b8d"
     },
     "prizes/max4d/all.csv": {
       "bytes": 1764794,
@@ -629,12 +629,12 @@
     "prizes/mega645/all.csv": {
       "bytes": 2299759,
       "data_rows": 6268,
-      "sha256": "ec57b70e4b28318e14e424c772e3b6110ef1ad93e00c73885a801c47134145d4"
+      "sha256": "a61bd50cf8b21f11ec84613dc94a9af9534647b1971fbd1551ebc75f961f9a96"
     },
     "prizes/power655/all.csv": {
-      "bytes": 2610676,
+      "bytes": 2610731,
       "data_rows": 7015,
-      "sha256": "5f5685fd6d34b2a69920e2fec128540c2caa98d981dc2ca1ba02dec6121523b8"
+      "sha256": "3310f33f3542264ee1264a1f7746e3aee509091b2cc1bd24bec70ff80bfdb537"
     }
   },
   "methodology_versions": {
@@ -643,7 +643,7 @@
     "repository_snapshot": "1.0.0"
   },
   "parser_version": "0.2.0",
-  "repository_commit": "61048f9ba51c450fdaf42666cbf347d689ce6124",
+  "repository_commit": "ecc4ae5437d1f759b9aa0d1a831f98d89c45ee8b",
   "schema_version": 1,
-  "snapshot_at": "2026-09-26T11:44:45+00:00"
+  "snapshot_at": "2026-09-26T15:03:20+00:00"
 }
