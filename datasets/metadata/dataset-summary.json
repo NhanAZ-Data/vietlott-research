@@ -1,9 +1,9 @@
 {
-  "confirmed_rows": 398775,
-  "dataset_updated_at": "2026-09-29T09:00:01+00:00",
-  "draw_rows": 398836,
+  "confirmed_rows": 398778,
+  "dataset_updated_at": "2026-09-29T12:45:03+00:00",
+  "draw_rows": 398839,
   "not_confirmed_rows": 61,
-  "prize_rows": 48113,
+  "prize_rows": 48133,
   "products": {
     "bingo18": {
       "confirmed_rows": 98694,
@@ -24,13 +24,13 @@
       "rows": 293583
     },
     "lotto535": {
-      "confirmed_rows": 914,
+      "confirmed_rows": 915,
       "first_date": "2025-06-29",
-      "last_date": "2026-09-28",
-      "max_id": "00914",
+      "last_date": "2026-09-29",
+      "max_id": "00915",
       "min_id": "00001",
       "not_confirmed_rows": 0,
-      "rows": 914
+      "rows": 915
     },
     "max3d": {
       "confirmed_rows": 1138,
@@ -42,13 +42,13 @@
       "rows": 1138
     },
     "max3dpro": {
-      "confirmed_rows": 784,
+      "confirmed_rows": 785,
       "first_date": "2021-09-14",
-      "last_date": "2026-09-26",
-      "max_id": "00784",
+      "last_date": "2026-09-29",
+      "max_id": "00785",
       "min_id": "00001",
       "not_confirmed_rows": 0,
-      "rows": 784
+      "rows": 785
     },
     "max4d": {
       "confirmed_rows": 722,
@@ -69,13 +69,13 @@
       "rows": 1568
     },
     "power655": {
-      "confirmed_rows": 1403,
+      "confirmed_rows": 1404,
       "first_date": "2017-08-01",
-      "last_date": "2026-09-26",
-      "max_id": "01403",
+      "last_date": "2026-09-29",
+      "max_id": "01404",
       "min_id": "00001",
       "not_confirmed_rows": 0,
-      "rows": 1403
+      "rows": 1404
     }
   },
   "schema_version": 1,
