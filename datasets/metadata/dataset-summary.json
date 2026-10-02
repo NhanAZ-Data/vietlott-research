@@ -1,18 +1,18 @@
 {
-  "confirmed_rows": 399091,
-  "dataset_updated_at": "2026-10-02T19:13:02+00:00",
-  "draw_rows": 399152,
+  "confirmed_rows": 399092,
+  "dataset_updated_at": "2026-10-02T19:48:48+00:00",
+  "draw_rows": 399153,
   "not_confirmed_rows": 61,
   "prize_rows": 48225,
   "products": {
     "bingo18": {
-      "confirmed_rows": 98844,
+      "confirmed_rows": 98845,
       "first_date": "2024-12-03",
       "last_date": "2026-10-02",
-      "max_id": "0189377",
+      "max_id": "0189378",
       "min_id": "0083123",
       "not_confirmed_rows": 30,
-      "rows": 98874
+      "rows": 98875
     },
     "keno": {
       "confirmed_rows": 293702,
