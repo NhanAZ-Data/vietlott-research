@@ -82,7 +82,11 @@ def run_update(
                 if spec.slug not in failed_products:
                     continue
                 try:
-                    batch = secondary_source.fetch(spec)
+                    batch = secondary_source.fetch(
+                        spec,
+                        existing_ids=store.existing_draw_ids(spec.slug),
+                        incomplete_prize_ids=store.incomplete_prize_ids(spec.slug),
+                    )
                     fallback_reports[spec.slug] = _store_secondary_batch(
                         store,
                         batch,

@@ -173,3 +173,117 @@ def test_secondary_store_rejects_a_conflicting_existing_draw(tmp_path) -> None:
             )
     finally:
         store.close()
+
+
+def test_parse_modern_secondary_vlitem() -> None:
+    html = """
+    <ul class="vlds vl-mega">
+      <li>
+        <a class="vlitem" href="/kqxs-mega-645-ngay-21-10-2026"
+           title="Kết quả Mega 6/45 kỳ #001578 ngày 21/10/2026">
+          <span class="vlky"><b>#001578</b><time datetime="2026-10-21">T.Tư 21/10/2026</time></span>
+          <span class="vlso">
+            <span class="kq">04</span><span class="kq">10</span><span class="kq">14</span>
+            <span class="kq">22</span><span class="kq">25</span><span class="kq">44</span>
+          </span>
+          <span class="vljp"><small>Jackpot</small><b>31.281.381.500</b></span>
+        </a>
+      </li>
+    </ul>
+    """
+    batch = parse_secondary_page(
+        PRODUCT_SPECS["mega645"],
+        html,
+        source_url="https://xosominhngoc.net.vn/kqxs-mega-645",
+    )
+    assert len(batch.draws) == 1
+    assert batch.draws[0].draw_id == "01578"
+    assert batch.draws[0].draw_date == date(2026, 10, 21)
+    assert batch.draws[0].result["numbers"] == [4, 10, 14, 22, 25, 44]
+    assert batch.draws[0].validation_status == "valid"
+
+
+def test_parse_modern_secondary_vlitem_max3d() -> None:
+    html = """
+    <ul class="vlds vl-max3d">
+      <li>
+        <a class="vlitem" href="/kqxs-max3d-ngay-21-10-2026"
+           title="Kết quả Max3D kỳ #001148 ngày 21/10/2026">
+          <span class="vlky"><b>#001148</b><time datetime="2026-10-21">T.Tư 21/10/2026</time></span>
+          <span class="vlso">
+            <span class="vlg gdb"><em>ĐB</em><span class="vlbs"><span class="vlb">
+              <span class="kq db">456</span><span class="kq db">213</span>
+            </span></span></span>
+            <span class="vlg gnhat"><em>Nhất</em><span class="vlbs"><span class="vlb">
+              <span class="kq">650</span><span class="kq">872</span>
+              <span class="kq">687</span><span class="kq">369</span>
+            </span></span></span>
+            <span class="vlg gnhi"><em>Nhì</em><span class="vlbs">
+              <span class="vlb">
+                <span class="kq">671</span><span class="kq">563</span><span class="kq">220</span>
+              </span>
+              <span class="vlb">
+                <span class="kq">419</span><span class="kq">023</span><span class="kq">222</span>
+              </span>
+            </span></span>
+            <span class="vlg gba"><em>Ba</em><span class="vlbs">
+              <span class="vlb">
+                <span class="kq">523</span><span class="kq">509</span>
+                <span class="kq">237</span><span class="kq">385</span>
+              </span>
+              <span class="vlb">
+                <span class="kq">452</span><span class="kq">403</span>
+                <span class="kq">243</span><span class="kq">682</span>
+              </span>
+            </span></span>
+          </span>
+        </a>
+      </li>
+    </ul>
+    """
+    batch = parse_secondary_page(
+        PRODUCT_SPECS["max3d"],
+        html,
+        source_url="https://xosominhngoc.net.vn/kqxs-max3d",
+    )
+    assert len(batch.draws) == 1
+    assert batch.draws[0].draw_id == "01148"
+    assert batch.draws[0].result["tiers"]["special"] == ["456", "213"]
+    assert batch.draws[0].result["tiers"]["third"][-1] == "682"
+    assert batch.draws[0].validation_status == "valid"
+
+
+def test_parse_modern_secondary_with_client_prizes() -> None:
+    class MockClient:
+        def get_text(self, url: str) -> str:
+            return """
+            <table class="tblsltmega">
+              <thead><tr><th>Giải</th><th>Trùng</th><th>SL</th><th>Giá trị</th></tr></thead>
+              <tbody>
+                <tr><td>Jackpot</td><td>6 số</td><td>1</td><td>31.281.381.500</td></tr>
+                <tr><td>Giải nhất</td><td>5 số</td><td>63</td><td>10.000.000</td></tr>
+              </tbody>
+            </table>
+            """
+
+    html = """
+    <a class="vlitem" href="/kqxs-mega-645-ngay-21-10-2026">
+      <span class="vlky"><b>#001578</b><time datetime="2026-10-21">21/10/2026</time></span>
+      <span class="vlso">
+        <span class="kq">04</span><span class="kq">10</span><span class="kq">14</span>
+        <span class="kq">22</span><span class="kq">25</span><span class="kq">44</span>
+      </span>
+    </a>
+    """
+    batch = parse_secondary_page(
+        PRODUCT_SPECS["mega645"],
+        html,
+        source_url="https://xosominhngoc.net.vn/kqxs-mega-645",
+        client=MockClient(),  # type: ignore[arg-type]
+    )
+    assert len(batch.draws) == 1
+    assert batch.draws[0].prize_status == "secondary_complete"
+    assert len(batch.prizes) == 2
+    assert batch.prizes[0].prize_value_vnd == 31_281_381_500
+    assert batch.prizes[1].winner_count == 63
+
