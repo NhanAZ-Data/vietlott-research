@@ -56,13 +56,14 @@ class SecondaryResultSource:
         *,
         existing_ids: set[str] | None = None,
         incomplete_prize_ids: set[str] | None = None,
+        max_pages: int = 10,
     ) -> SecondaryBatch:
         path = PRODUCT_PATHS.get(spec.slug)
         if path is None:
             raise ValueError(f"No secondary source is configured for {spec.slug}")
         source_url = f"{BASE_URL}{path}"
         html = self.client.get_text(source_url)
-        return parse_secondary_page(
+        batch = parse_secondary_page(
             spec,
             html,
             source_url=source_url,
@@ -70,6 +71,59 @@ class SecondaryResultSource:
             existing_ids=existing_ids,
             incomplete_prize_ids=incomplete_prize_ids,
         )
+
+        if (
+            spec.slug in {"keno", "bingo18"}
+            and existing_ids
+            and batch.draws
+            and batch.draws[-1].draw_id not in existing_ids
+        ):
+            draw_date_str = batch.draws[0].draw_date.isoformat()
+            current_draw_ids = {d.draw_id for d in batch.draws}
+            for page in range(1, max_pages + 1):
+                ajax_url = (
+                    f"{BASE_URL}/ajax/kqxs_vietlott_list.php"
+                    f"?game={spec.slug}&draw_date={draw_date_str}&page={page}"
+                )
+                try:
+                    ajax_html = self.client.get_text(ajax_url)
+                except Exception as exc:
+                    LOGGER.warning(
+                        "Secondary ajax pagination failed for %s page %s: %s",
+                        spec.slug,
+                        page,
+                        exc,
+                    )
+                    break
+
+                page_soup = BeautifulSoup(ajax_html, "html.parser")
+                page_blocks = page_soup.select("a.vlitem") or page_soup.select("li a")
+                if not page_blocks:
+                    break
+
+                has_new = False
+                reached_existing = False
+                for block in page_blocks:
+                    try:
+                        record = _parse_draw(spec, block, ajax_url)
+                    except Exception:
+                        continue
+                    if record.draw_id in current_draw_ids:
+                        continue
+                    if record.draw_id in existing_ids:
+                        reached_existing = True
+                        break
+                    warnings = validate_draw(record, spec)
+                    if not warnings:
+                        record.prize_status = "rules_available"
+                        batch.draws.append(record)
+                        current_draw_ids.add(record.draw_id)
+                        has_new = True
+
+                if reached_existing or not has_new:
+                    break
+
+        return batch
 
 
 def parse_secondary_page(

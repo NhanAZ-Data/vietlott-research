@@ -287,3 +287,40 @@ def test_parse_modern_secondary_with_client_prizes() -> None:
     assert batch.prizes[0].prize_value_vnd == 31_281_381_500
     assert batch.prizes[1].winner_count == 63
 
+
+def test_secondary_result_source_paginates_for_fast_products() -> None:
+    from vietlott_collector.sources.secondary import SecondaryResultSource
+
+    class MockPaginationClient:
+        def get_text(self, url: str) -> str:
+            if "kqxs-bingo18" in url:
+                return """
+                <a class="vlitem" href="#">
+                  <span class="vlky"><b>#0192390</b><time datetime="2026-10-21">21/10/2026</time></span>
+                  <span class="vlso"><span class="kq">1</span><span class="kq">2</span><span class="kq">3</span></span>
+                </a>
+                """
+            if "page=1" in url:
+                return """
+                <a class="vlitem" href="#">
+                  <span class="vlky"><b>#0192389</b><time datetime="2026-10-21">21/10/2026</time></span>
+                  <span class="vlso"><span class="kq">4</span><span class="kq">5</span><span class="kq">6</span></span>
+                </a>
+                <a class="vlitem" href="#">
+                  <span class="vlky"><b>#0192388</b><time datetime="2026-10-21">21/10/2026</time></span>
+                  <span class="vlso"><span class="kq">2</span><span class="kq">2</span><span class="kq">2</span></span>
+                </a>
+                """
+            return ""
+
+    source = SecondaryResultSource(MockPaginationClient())  # type: ignore[arg-type]
+    batch = source.fetch(
+        PRODUCT_SPECS["bingo18"],
+        existing_ids={"0192388"},
+        max_pages=2,
+    )
+    assert len(batch.draws) == 2
+    assert batch.draws[0].draw_id == "0192390"
+    assert batch.draws[1].draw_id == "0192389"
+
+
