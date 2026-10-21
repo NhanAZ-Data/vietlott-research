@@ -294,23 +294,29 @@ def test_secondary_result_source_paginates_for_fast_products() -> None:
     class MockPaginationClient:
         def get_text(self, url: str) -> str:
             if "kqxs-bingo18" in url:
-                return """
-                <a class="vlitem" href="#">
-                  <span class="vlky"><b>#0192390</b><time datetime="2026-10-21">21/10/2026</time></span>
-                  <span class="vlso"><span class="kq">1</span><span class="kq">2</span><span class="kq">3</span></span>
-                </a>
-                """
+                return (
+                    '<a class="vlitem" href="#">'
+                    '<span class="vlky"><b>#0192390</b>'
+                    '<time datetime="2026-10-21">21/10/2026</time></span>'
+                    '<span class="vlso"><span class="kq">1</span>'
+                    '<span class="kq">2</span><span class="kq">3</span></span>'
+                    "</a>"
+                )
             if "page=1" in url:
-                return """
-                <a class="vlitem" href="#">
-                  <span class="vlky"><b>#0192389</b><time datetime="2026-10-21">21/10/2026</time></span>
-                  <span class="vlso"><span class="kq">4</span><span class="kq">5</span><span class="kq">6</span></span>
-                </a>
-                <a class="vlitem" href="#">
-                  <span class="vlky"><b>#0192388</b><time datetime="2026-10-21">21/10/2026</time></span>
-                  <span class="vlso"><span class="kq">2</span><span class="kq">2</span><span class="kq">2</span></span>
-                </a>
-                """
+                return (
+                    '<a class="vlitem" href="#">'
+                    '<span class="vlky"><b>#0192389</b>'
+                    '<time datetime="2026-10-21">21/10/2026</time></span>'
+                    '<span class="vlso"><span class="kq">4</span>'
+                    '<span class="kq">5</span><span class="kq">6</span></span>'
+                    "</a>"
+                    '<a class="vlitem" href="#">'
+                    '<span class="vlky"><b>#0192388</b>'
+                    '<time datetime="2026-10-21">21/10/2026</time></span>'
+                    '<span class="vlso"><span class="kq">2</span>'
+                    '<span class="kq">2</span><span class="kq">2</span></span>'
+                    "</a>"
+                )
             return ""
 
     source = SecondaryResultSource(MockPaginationClient())  # type: ignore[arg-type]
@@ -322,5 +328,6 @@ def test_secondary_result_source_paginates_for_fast_products() -> None:
     assert len(batch.draws) == 2
     assert batch.draws[0].draw_id == "0192390"
     assert batch.draws[1].draw_id == "0192389"
+
 
 
