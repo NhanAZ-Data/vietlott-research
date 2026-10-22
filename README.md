@@ -1,89 +1,83 @@
 # Vietlott Data Collector
 
-`vietlott-data-collector` là kho thu thập, chuẩn hóa và phát hành dữ liệu kết quả Vietlott để người khác dùng trong công cụ riêng của họ.
+`vietlott-data-collector` là công cụ Python để thu thập, chuẩn hóa, kiểm tra và phát hành dữ liệu kết quả Vietlott. Repository cũng cung cấp snapshot CSV để dùng trong các ứng dụng và nghiên cứu khác.
 
-Đây là tên package/project mới. URL repository Git hiện vẫn là `NhanAZ-Data/vietlott-research`; có thể đổi tên repository từ xa sau khi kiểm tra các consumer đang dùng URL cũ.
+## Phạm vi
 
-Phạm vi duy nhất của project:
+Project hỗ trợ tám sản phẩm: Mega 6/45 (`mega645`), Power 6/55 (`power655`), Lotto 5/35 (`lotto535`), Max 3D (`max3d`), Max 3D Pro (`max3dpro`), Max 4D (`max4d`), Keno (`keno`) và Bingo18 (`bingo18`).
 
-- đọc dữ liệu từ nguồn Vietlott và nguồn đối chiếu đã khai báo;
-- chuẩn hóa kỳ quay, giải thưởng, luật giải và provenance;
-- lưu kho làm việc SQLite/CSV;
-- xuất snapshot CSV phân vùng, kiểm tra tính toàn vẹn và cập nhật tự động.
+Collector lưu kết quả kỳ quay, giải thưởng, trạng thái xác nhận và thông tin nguồn. Snapshot trong `datasets/` giữ cấu trúc CSV, metadata chất lượng và manifest có hash để người dùng kiểm tra phiên bản dữ liệu.
 
-Project không chứa dự đoán, mô hình, backtest, phân tích thống kê, dashboard hay website. Các thư mục và workflow thuộc các phần đó đã được loại bỏ để toàn bộ công suất còn lại dành cho thu thập dữ liệu.
+## Cài đặt
 
-## Dữ liệu phát hành
-
-Snapshot trong `datasets/` bao gồm:
-
-- Mega 6/45 (`mega645`)
-- Power 6/55 (`power655`)
-- Lotto 5/35 (`lotto535`)
-- Max 3D (`max3d`)
-- Max 3D Pro (`max3dpro`)
-- Max 4D (`max4d`)
-- Keno (`keno`)
-- Bingo18 (`bingo18`)
-
-Các tệp quan trọng:
-
-- `datasets/draws/<product>/...csv`: một dòng cho mỗi `(product, draw_id)`;
-- `datasets/prizes/<product>/all.csv`: các dòng giải thưởng đã thu thập;
-- `datasets/prize_rules.csv`: luật giải ổn định;
-- `datasets/exclusions.csv`: các kỳ có thông báo trạng thái đặc biệt;
-- `datasets/metadata/dataset-summary.json`: phạm vi và số dòng;
-- `datasets/metadata/quality-report.json`: kiểm tra cấu trúc, nguồn và độ phủ;
-- `datasets/metadata/snapshot-manifest.json`: hash và kích thước từng tệp.
-
-`draw_status`, `validation_status` và các trường provenance phải được giữ nguyên khi xuất dữ liệu. Collector không tự suy ra kỳ bị thiếu từ mã số hoặc lịch dự kiến.
-
-## Cài đặt và sử dụng
+Yêu cầu Python 3.11 trở lên.
 
 ```powershell
 git clone https://github.com/NhanAZ-Data/vietlott-research.git
 cd vietlott-research
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install -e ".[dev]"
+python -m pip install -e '.[parquet]'
 ```
 
-Liệt kê sản phẩm được hỗ trợ:
+Extra `parquet` cài PyArrow để đọc và ghi Parquet. Nếu chỉ dùng CSV, cài package bằng `python -m pip install -e .`.
+
+## Dùng collector
+
+Liệt kê sản phẩm:
 
 ```powershell
-vietlott-data-collector products
+vietlott-collector products
 ```
 
-Thu thập các kỳ mới vào kho SQLite/CSV:
+Thu thập các kỳ mới vào thư mục `data/` dưới dạng CSV:
 
 ```powershell
-vietlott-data-collector collect `
+vietlott-collector collect `
   --products keno bingo18 `
   --output-dir data `
-  --format parquet `
+  --format csv `
   --contact-email you@example.com
 ```
 
-Chạy backfill lịch sử hoặc bỏ qua bảng giải thưởng khi cần tốc độ:
+Tiếp tục thu thập dữ liệu lịch sử cho mọi sản phẩm:
 
 ```powershell
-vietlott-collector collect --products all --output-dir data --backfill
-vietlott-collector collect --products all --output-dir data --without-prizes
+vietlott-collector collect --products all --backfill --output-dir data --format csv --contact-email you@example.com
 ```
 
-Kiểm tra kho làm việc:
+Kiểm tra kho dữ liệu:
 
 ```powershell
-vietlott-collector validate --output-dir data --format parquet
+vietlott-collector validate --output-dir data --format csv
 ```
 
-Để dùng snapshot đã phát hành bằng công cụ khác, ghép các phân vùng thành CSV:
+Thay `csv` bằng `parquet` nếu đã cài extra `parquet`. Hãy thay `you@example.com` bằng địa chỉ liên hệ để collector đưa vào HTTP User-Agent.
+
+## Dùng snapshot đã phát hành
+
+Snapshot trong `datasets/` có các tệp chính sau:
+
+| Đường dẫn | Nội dung |
+| --- | --- |
+| `datasets/draws/<product>/YYYY-MM.csv` | Kỳ quay Keno và Bingo18, chia theo tháng |
+| `datasets/draws/<product>/all.csv` | Kỳ quay của các sản phẩm còn lại |
+| `datasets/prizes/<product>/all.csv` | Dữ liệu giải thưởng |
+| `datasets/prize_rules.csv` | Luật giải đã chuẩn hóa |
+| `datasets/exclusions.csv` | Ngoại lệ kỳ quay có thông báo nguồn |
+| `datasets/metadata/dataset-summary.json` | Phạm vi, số dòng và khoảng ngày |
+| `datasets/metadata/quality-report.json` | Kết quả kiểm tra cấu trúc và chất lượng |
+| `datasets/metadata/snapshot-manifest.json` | Hash và kích thước từng tệp |
+
+Giữ nguyên `draw_status`, `validation_status` và các trường provenance khi chuyển đổi dữ liệu. Collector không tạo kỳ quay hoặc kết quả từ mã kỳ còn thiếu hay lịch dự kiến.
+
+Ghép snapshot thành kho làm việc:
 
 ```powershell
 vietlott-repository-data hydrate --source-dir datasets --destination-dir data
 ```
 
-Sau khi cập nhật kho làm việc, đóng gói lại và kiểm tra snapshot:
+Sau khi cập nhật dữ liệu, xuất snapshot mới và kiểm tra:
 
 ```powershell
 vietlott-repository-data publish --source-dir data --destination-dir datasets
@@ -91,35 +85,22 @@ vietlott-repository-data validate --source-dir datasets
 vietlott-repository-data audit --source-dir datasets
 ```
 
-## Tài liệu cho người dùng dữ liệu
+## Cập nhật tự động
+
+GitHub Actions thường xuyên kiểm tra Keno và Bingo18, đồng thời kiểm tra Mega 6/45, Power 6/55, Lotto 5/35, Max 3D và Max 3D Pro theo lịch. Max 4D có trong snapshot lịch sử nhưng không thuộc lịch cập nhật tự động.
+
+Mỗi lượt khôi phục kho làm việc từ snapshot, thu thập và đối chiếu dữ liệu, áp dụng ngoại lệ có nguồn, rồi chạy kiểm tra chất lượng. Workflow chỉ cập nhật `datasets/` khi snapshot hợp lệ có thay đổi. Lịch chỉ xác định thời điểm kiểm tra; collector không tạo kỳ quay khi Vietlott chưa công bố dữ liệu.
+
+## Tài liệu
 
 - [Nguồn và quy trình thu thập](docs/THU_THAP_DU_LIEU.md)
-- [Hợp đồng dữ liệu](docs/DATA_DICTIONARY.md)
+- [Từ điển dữ liệu](docs/DATA_DICTIONARY.md)
 - [Chất lượng và provenance](docs/CHAT_LUONG_DU_LIEU.md)
 - [Tự động cập nhật](docs/TU_DONG_CAP_NHAT.md)
 - [Kiến trúc collector](docs/ARCHITECTURE.md)
 
-`SOURCE_SURVEY.md` chỉ là đường dẫn tương thích tới tài liệu nguồn. Không có tài liệu hoặc artifact nào mô tả dự đoán hay phân tích trong project này.
+## Nguồn và giấy phép
 
-## Tự động cập nhật
+Collector ưu tiên kết quả công khai của [Vietlott](https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/). Snapshot lưu thông tin nguồn và trạng thái xác nhận để người dùng tự đánh giá dữ liệu trước khi sử dụng.
 
-GitHub Actions chạy hai lịch thu thập: nhóm sản phẩm có tần suất cao và nhóm sản phẩm theo mốc giờ. Mỗi lượt:
-
-1. khôi phục kho làm việc từ snapshot;
-2. đọc nguồn chính thức, dùng nguồn đối chiếu khi nguồn chính thức không truy cập được;
-3. đối chiếu một vùng kỳ gần nhất;
-4. áp dụng ngoại lệ chính thức;
-5. validate, audit và kiểm tra hồi quy chất lượng;
-6. chỉ commit `datasets` khi dữ liệu hợp lệ thực sự thay đổi.
-
-Không có workflow triển khai website hoặc sinh báo cáo phân tích.
-
-## Nguồn và trách nhiệm
-
-Collector ưu tiên các trang kết quả công khai của [Vietlott](https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/) và lưu URL, thời điểm, trạng thái xác nhận cùng lịch sử nguồn. Khi cần, nguồn đối chiếu được ghi rõ trong `attributes_json`; dữ liệu không được nâng trạng thái chỉ vì URL có vẻ chính thức.
-
-Repo không liên kết hoặc đại diện cho Vietlott. Người dùng dữ liệu tự kiểm tra điều khoản nguồn, quyền sở hữu trí tuệ và quy định áp dụng. Dữ liệu lịch sử là dữ liệu tham khảo, không phải tư vấn tài chính.
-
-## Giấy phép
-
-Mã nguồn phát hành theo MIT. Dữ liệu gốc vẫn chịu quyền và điều kiện của nguồn tương ứng.
+Project không liên kết hoặc đại diện cho Vietlott. Mã nguồn được phát hành theo giấy phép MIT. Dữ liệu gốc vẫn tuân theo quyền sở hữu và điều kiện của nguồn tương ứng.
