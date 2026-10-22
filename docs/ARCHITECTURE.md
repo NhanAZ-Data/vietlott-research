@@ -1,28 +1,16 @@
 # Kiến trúc Vietlott Data Collector
 
-```text
-GitHub Actions hoặc CLI
-        |
-        v
-Nguồn Vietlott ưu tiên ---- lỗi truy cập ----> Nguồn đối chiếu
-        |
-        v
-Parser theo họ sản phẩm
-        |
-        v
-Validation + provenance + chuẩn hóa
-        |
-        v
-SQLite working store
-  |        |        |
-  v        v        v
-draws.csv prizes.csv prize_rules.csv
-        |
-        v
-Repository data publisher
-        |
-        v
-datasets phân vùng + metadata + manifest
+```mermaid
+flowchart TD
+    A["GitHub Actions hoặc CLI"] --> B["Nguồn Vietlott ưu tiên"]
+    B --> C["Parser theo họ sản phẩm"]
+    B -. "Lỗi truy cập" .-> D["Nguồn đối chiếu"]
+    D --> C
+    C --> E["Validation + provenance + chuẩn hóa"]
+    E --> F["SQLite working store"]
+    F --> G["draws.csv · prizes.csv · prize_rules.csv"]
+    G --> H["Repository data publisher"]
+    H --> I["datasets phân vùng + metadata + manifest"]
 ```
 
 ## Thành phần
