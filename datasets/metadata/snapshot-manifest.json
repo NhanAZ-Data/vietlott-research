@@ -1,11 +1,11 @@
 {
   "dataset_rows": {
-    "draws": 401421,
+    "draws": 401441,
     "prizes": 48745
   },
   "date_range": {
     "first": "2016-07-20",
-    "last": "2026-10-21"
+    "last": "2026-10-22"
   },
   "files": {
     "draws/bingo18/2024-12.csv": {
@@ -119,9 +119,9 @@
       "sha256": "9a736ba3d2330a912c546a1f73c730d5d5cdba72b31dd6b0d3cde4bf5299d568"
     },
     "draws/bingo18/2026-10.csv": {
-      "bytes": 474689,
-      "data_rows": 1213,
-      "sha256": "9a6db09726df994e55927a3bbfe0aa151d7380fb5a6b99a33ce894344bce2705"
+      "bytes": 478600,
+      "data_rows": 1223,
+      "sha256": "cf797f1a6a4b2ab403bb4c4088d21b3409cdbef37acf70ec047207bf268d6132"
     },
     "draws/keno/2019-08.csv": {
       "bytes": 359449,
@@ -554,9 +554,9 @@
       "sha256": "f7ce0eaac5e5cf9a54b2cea1bfe87a87ac8b4ba66e997ca7ac7bc31936d50a48"
     },
     "draws/keno/2026-10.csv": {
-      "bytes": 556701,
-      "data_rows": 1166,
-      "sha256": "2d306c47f841efccbe16c8f448a75b67a63c092063759d1b0ad526f6fccadef5"
+      "bytes": 561690,
+      "data_rows": 1176,
+      "sha256": "5e61f77d4f655c4f72578fd29e4f45935cc7dcb9ef9855def0956792036db011"
     },
     "draws/lotto535/all.csv": {
       "bytes": 404175,
@@ -594,12 +594,12 @@
       "sha256": "204369f98fca886f5b1cc2b357f8f1730298d3149fe4287f71274f3f951f15b0"
     },
     "metadata/dataset-summary.json": {
-      "bytes": 2145,
-      "sha256": "fb926a34b5d9feebfe7ef13b16f47ce302a93f977c8d36ed6fdc5b2a5184049a"
+      "bytes": 2146,
+      "sha256": "90f11e720b2545a914fe23577e108d4a76281289fce5a5d8dcb32a23eaac400c"
     },
     "metadata/quality-report.json": {
-      "bytes": 159031,
-      "sha256": "8d9a7bba4d052af9170b87e1f9f78096f5a83d2e832e8657f9b8ef3b44aa3c85"
+      "bytes": 159356,
+      "sha256": "975ba2b39d4af6ec119f71383fb006e670879894a6865a4ac4b84ec7fdece8be"
     },
     "prize_rules.csv": {
       "bytes": 89189,
@@ -653,7 +653,7 @@
     "repository_snapshot": "1.0.0"
   },
   "parser_version": "0.2.0",
-  "repository_commit": "0d7292ef0c179fc4a1248303737ccfac7cf75e38",
+  "repository_commit": "b0dde2967fbbac3876f9de33bebcd8fe76c5c169",
   "schema_version": 1,
-  "snapshot_at": "2026-10-21T17:54:39+00:00"
+  "snapshot_at": "2026-10-22T01:26:35+00:00"
 }
