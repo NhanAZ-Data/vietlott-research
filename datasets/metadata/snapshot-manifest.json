@@ -1,11 +1,11 @@
 {
   "dataset_rows": {
-    "draws": 401824,
+    "draws": 401844,
     "prizes": 48877
   },
   "date_range": {
     "first": "2016-07-20",
-    "last": "2026-10-26"
+    "last": "2026-10-27"
   },
   "files": {
     "draws/bingo18/2024-12.csv": {
@@ -119,9 +119,9 @@
       "sha256": "9a736ba3d2330a912c546a1f73c730d5d5cdba72b31dd6b0d3cde4bf5299d568"
     },
     "draws/bingo18/2026-10.csv": {
-      "bytes": 550183,
-      "data_rows": 1406,
-      "sha256": "637eb878587af2f4f6a7841968a47d75054ad9504e80791b67aedbfd92843149"
+      "bytes": 554096,
+      "data_rows": 1416,
+      "sha256": "936ad681b45a60ce62f85706da6d7775ce47a424f8d1cfcbafdbd9306da26818"
     },
     "draws/keno/2019-08.csv": {
       "bytes": 359449,
@@ -554,9 +554,9 @@
       "sha256": "f7ce0eaac5e5cf9a54b2cea1bfe87a87ac8b4ba66e997ca7ac7bc31936d50a48"
     },
     "draws/keno/2026-10.csv": {
-      "bytes": 652537,
-      "data_rows": 1358,
-      "sha256": "eb195627cbe52202a82455b60c99d8cbcdad6430fb12322fdc8ea928467b42ec"
+      "bytes": 657525,
+      "data_rows": 1368,
+      "sha256": "69b2a165cbb89ef84cf06d2d799ae33ad077a8dcfd711981f313b5dd119d3e82"
     },
     "draws/lotto535/all.csv": {
       "bytes": 409134,
@@ -595,11 +595,11 @@
     },
     "metadata/dataset-summary.json": {
       "bytes": 2147,
-      "sha256": "d94721520fa72d8e8c8016cb852a8efb415c40ebb6c8a13aecac53929561b5de"
+      "sha256": "f84226d7c479b2f17bc840a28f11fcaca5280167650d1a10fdce0ddd21c8d27a"
     },
     "metadata/quality-report.json": {
-      "bytes": 165187,
-      "sha256": "1dd4616eebdf8a1690fc1745755de0989f395efa21a0b2bab2dc8174da6009b4"
+      "bytes": 165510,
+      "sha256": "b85ab38d4ef37636110c2689e056d87fa02f606fa47158846bdca7a9b99a467c"
     },
     "prize_rules.csv": {
       "bytes": 89189,
@@ -653,7 +653,7 @@
     "repository_snapshot": "1.0.0"
   },
   "parser_version": "0.2.0",
-  "repository_commit": "6b0466f8b4a8db2d8f24c1e46f48f3ff67f5a710",
+  "repository_commit": "3d0af0b9a3922cca5260b553f9dd82419913d5c7",
   "schema_version": 1,
-  "snapshot_at": "2026-10-26T19:53:10+00:00"
+  "snapshot_at": "2026-10-27T01:59:18+00:00"
 }
