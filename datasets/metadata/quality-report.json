@@ -7,7 +7,7 @@
     "structural_validity": "Deterministic validation of identifier width, result shape, number range and uniqueness rules."
   },
   "duplicate_draw_examples": [],
-  "generated_from_dataset_at": "2026-10-30T08:57:03+00:00",
+  "generated_from_dataset_at": "2026-10-30T12:43:53+00:00",
   "grain": "one canonical row per (product, draw_id)",
   "limitations": [
     "Legacy canonical rows do not always retain every raw source observation. Conflict counts are therefore reported as unavailable rather than zero.",
@@ -5899,47 +5899,47 @@
         "validation_mismatches": 0
       },
       "draw_confirmation": {
-        "confirmed": 975
+        "confirmed": 976
       },
       "first_date": "2025-06-29",
       "last_date": "2026-10-29",
-      "max_id": "00975",
+      "max_id": "00976",
       "min_id": "00001",
       "prize_coverage": {
-        "draws_with_prize_rows": 975,
-        "prize_rows": 7545,
+        "draws_with_prize_rows": 976,
+        "prize_rows": 7552,
         "rate": 1.0
       },
       "prize_status": {
         "complete": 720,
-        "secondary_complete": 255
+        "secondary_complete": 256
       },
       "result_coverage": {
         "rate": 1.0,
-        "rows_with_result": 975
+        "rows_with_result": 976
       },
-      "rows": 975,
+      "rows": 976,
       "source_agreement": {
         "conflict_count_reason": "Raw source observations were not retained consistently in legacy rows.",
         "conflicts": null,
         "multi_source_consensus": 0,
         "official_direct": 0,
         "official_verified_match": 721,
-        "pending_official": 254,
+        "pending_official": 255,
         "single_secondary_source": 0,
         "unknown": 0
       },
       "source_origin": {
         "official": 721,
-        "secondary": 254
+        "secondary": 255
       },
       "source_verification": {
         "official_verified_match": 721,
-        "pending_official": 254
+        "pending_official": 255
       },
       "structural_validity": {
         "unchecked": 21,
-        "valid": 954
+        "valid": 955
       }
     },
     "max3d": {
@@ -5956,47 +5956,48 @@
         "validation_mismatches": 0
       },
       "draw_confirmation": {
-        "confirmed": 1150
+        "confirmed": 1151
       },
       "first_date": "2019-04-22",
-      "last_date": "2026-10-26",
-      "max_id": "01150",
+      "last_date": "2026-10-28",
+      "max_id": "01151",
       "min_id": "00001",
       "prize_coverage": {
         "draws_with_prize_rows": 1150,
         "prize_rows": 12674,
-        "rate": 1.0
+        "rate": 0.99913119
       },
       "prize_status": {
         "complete": 1103,
+        "not_requested": 1,
         "secondary_complete": 47
       },
       "result_coverage": {
         "rate": 1.0,
-        "rows_with_result": 1150
+        "rows_with_result": 1151
       },
-      "rows": 1150,
+      "rows": 1151,
       "source_agreement": {
         "conflict_count_reason": "Raw source observations were not retained consistently in legacy rows.",
         "conflicts": null,
         "multi_source_consensus": 0,
         "official_direct": 0,
         "official_verified_match": 1103,
-        "pending_official": 47,
+        "pending_official": 48,
         "single_secondary_source": 0,
         "unknown": 0
       },
       "source_origin": {
         "official": 1103,
-        "secondary": 47
+        "secondary": 48
       },
       "source_verification": {
         "official_verified_match": 1103,
-        "pending_official": 47
+        "pending_official": 48
       },
       "structural_validity": {
         "unchecked": 11,
-        "valid": 1139
+        "valid": 1140
       }
     },
     "max3dpro": {
@@ -6123,47 +6124,47 @@
         "validation_mismatches": 0
       },
       "draw_confirmation": {
-        "confirmed": 1580
+        "confirmed": 1581
       },
       "first_date": "2016-07-20",
-      "last_date": "2026-10-25",
-      "max_id": "01580",
+      "last_date": "2026-10-28",
+      "max_id": "01581",
       "min_id": "00001",
       "prize_coverage": {
-        "draws_with_prize_rows": 1580,
-        "prize_rows": 6320,
+        "draws_with_prize_rows": 1581,
+        "prize_rows": 6324,
         "rate": 1.0
       },
       "prize_status": {
         "complete": 1538,
-        "secondary_complete": 42
+        "secondary_complete": 43
       },
       "result_coverage": {
         "rate": 1.0,
-        "rows_with_result": 1580
+        "rows_with_result": 1581
       },
-      "rows": 1580,
+      "rows": 1581,
       "source_agreement": {
         "conflict_count_reason": "Raw source observations were not retained consistently in legacy rows.",
         "conflicts": null,
         "multi_source_consensus": 0,
         "official_direct": 0,
         "official_verified_match": 1539,
-        "pending_official": 41,
+        "pending_official": 42,
         "single_secondary_source": 0,
         "unknown": 0
       },
       "source_origin": {
         "official": 1539,
-        "secondary": 41
+        "secondary": 42
       },
       "source_verification": {
         "official_verified_match": 1539,
-        "pending_official": 41
+        "pending_official": 42
       },
       "structural_validity": {
         "unchecked": 17,
-        "valid": 1563
+        "valid": 1564
       }
     },
     "power655": {
@@ -6228,12 +6229,12 @@
   "schema_version": 1,
   "totals": {
     "cross_checked_rows": 6901,
-    "draw_rows": 402057,
-    "draws_with_prizes": 6700,
+    "draw_rows": 402060,
+    "draws_with_prizes": 6702,
     "duplicate_draw_keys": 0,
     "official_source_rows": 7861,
-    "prize_rows": 48926,
-    "result_rows": 402057,
-    "structurally_valid_rows": 401272
+    "prize_rows": 48937,
+    "result_rows": 402060,
+    "structurally_valid_rows": 401275
   }
 }
