@@ -569,9 +569,9 @@
       "sha256": "d80591f2d8b78a51cf616239de9cd5d0e9766a599cc582b79136a3eeeee8b8e8"
     },
     "draws/lotto535/all.csv": {
-      "bytes": 417407,
+      "bytes": 417563,
       "data_rows": 987,
-      "sha256": "05e005b5eba26b463faae3025efb6d44bd541c01353c672da963543bf6a2391f"
+      "sha256": "15ba6f6ea31a5bb7e839e809ffc64e46c73468d31c220d9ff6fcb0c4ecb75685"
     },
     "draws/max3d/all.csv": {
       "bytes": 963319,
@@ -589,9 +589,9 @@
       "sha256": "91532729b155381d907c9e19412b4dc5478db75c5194f5fd474e625592bc3de2"
     },
     "draws/mega645/all.csv": {
-      "bytes": 1065215,
+      "bytes": 1065292,
       "data_rows": 1583,
-      "sha256": "9ee573fe979d4757247f6680563808b2ba068042645998397feb0731e8d52d6d"
+      "sha256": "70910c29c84e09acbc741bfab7a2450857bac43ba500c7b331392927ec77d441"
     },
     "draws/power655/all.csv": {
       "bytes": 975975,
@@ -629,7 +629,7 @@
     "prizes/lotto535/all.csv": {
       "bytes": 2467776,
       "data_rows": 7629,
-      "sha256": "d9a2f3cd94a9e3167557249735fc01200e9bcf0d4aadbc119b223b5ac821f7e5"
+      "sha256": "5d6d336d3f6cbaade8f79efb3620c637f68d9cc259138b4bb8e214eac4b7030d"
     },
     "prizes/max3d/all.csv": {
       "bytes": 6083679,
@@ -649,12 +649,12 @@
     "prizes/mega645/all.csv": {
       "bytes": 2315337,
       "data_rows": 6332,
-      "sha256": "fe91f17b058d3511219a7fa6fbb0e9148d17f1d8ce1c003d43bb4034fb936914"
+      "sha256": "259661433dd1f6e0f9c6082fcbc06cf7a6eea12841d8c6b7ac38b6aa70fcf7e9"
     },
     "prizes/power655/all.csv": {
       "bytes": 2629272,
       "data_rows": 7090,
-      "sha256": "9a4227bde9b247549d96d69f9ef182b9a2ee4f2b58f0dae2c55c47198dd85935"
+      "sha256": "a7b38e58dc5cf78430ae1a4a136cd9dde3f0c1342b03a449b4e262e341358917"
     }
   },
   "methodology_versions": {
@@ -663,7 +663,7 @@
     "repository_snapshot": "1.0.0"
   },
   "parser_version": "0.2.0",
-  "repository_commit": "3cca7fc521cc7add52e7f901fb47e843c4641147",
+  "repository_commit": "b49a60efcda52ed8178853b801edb45364ea9699",
   "schema_version": 1,
   "snapshot_at": "2026-11-04T18:16:04+00:00"
 }
