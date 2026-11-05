@@ -569,9 +569,9 @@
       "sha256": "8e4b407a6b00f1003c8cb71be16ef100a5dee90da97ced89de4b042446b44532"
     },
     "draws/lotto535/all.csv": {
-      "bytes": 418398,
+      "bytes": 418554,
       "data_rows": 989,
-      "sha256": "74d6777046424a5d55bbd1271e3f8038c7ea69eb84d1af2e1ac151189e5d10bb"
+      "sha256": "3feaf570d63576f21d7ce219c37c14d0b4d3c70467ee8c0b9054215fcbd87c81"
     },
     "draws/max3d/all.csv": {
       "bytes": 963319,
@@ -594,9 +594,9 @@
       "sha256": "70910c29c84e09acbc741bfab7a2450857bac43ba500c7b331392927ec77d441"
     },
     "draws/power655/all.csv": {
-      "bytes": 976374,
+      "bytes": 976452,
       "data_rows": 1419,
-      "sha256": "9b51155fd6724b3363b44bc172546d935378db7e4cd40f3527e9e7c0330c91dc"
+      "sha256": "0d85138df9acb521b6bea35c6753b295f03ea36f308b6e4e169a9fd5e02b7f04"
     },
     "exclusions.csv": {
       "bytes": 16789,
@@ -629,7 +629,7 @@
     "prizes/lotto535/all.csv": {
       "bytes": 2471304,
       "data_rows": 7643,
-      "sha256": "fa3bfbedb222cfe23ee12dfd143ef40dbac1f9ce5e1b1b55a6937e09be893beb"
+      "sha256": "9bd93dca7df74cc026ba45b750d7a2f09906097fbf5ec8d49aca704c13921e34"
     },
     "prizes/max3d/all.csv": {
       "bytes": 6083679,
@@ -649,12 +649,12 @@
     "prizes/mega645/all.csv": {
       "bytes": 2315337,
       "data_rows": 6332,
-      "sha256": "b8aabbe3beea67700536ebaeb9bd4e9bd7b09fdf67c0c87df50c68736ba3f80a"
+      "sha256": "16f8b3d27f83e8557c52aee688df1161160fd85d66ac4e90da8d9b349fa2ceca"
     },
     "prizes/power655/all.csv": {
       "bytes": 2630507,
       "data_rows": 7095,
-      "sha256": "453b6236567b51bc5c87bba5a991ed81b3b12f6c72e66c16fb1750b4c5cc0dc1"
+      "sha256": "527c5e79babb98ab6b3f63b5f0f9ac616ee0f66e8561b1a8edb0266e832d3365"
     }
   },
   "methodology_versions": {
@@ -663,7 +663,7 @@
     "repository_snapshot": "1.0.0"
   },
   "parser_version": "0.2.0",
-  "repository_commit": "93b75093a999a356be9420ffc39ac828893d384d",
+  "repository_commit": "549032ed3c69704240afbaa047b604aff0f02282",
   "schema_version": 1,
   "snapshot_at": "2026-11-05T18:51:37+00:00"
 }
